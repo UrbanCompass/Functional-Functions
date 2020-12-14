@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: functional-functions
-Version: 0.0.2
+Version: 0.0.3
 Summary: Commonly used functions by the Compass FBI Team
 Home-page: https://github.com/UrbanCompass/Functional-Functions
 Author: Lawrence Chin
@@ -10,7 +10,20 @@ Description: # Functional-Functions
         Created by the FBI Compass team, this package contains our team's most commonly used and useful functions
         
         # About
-        Contents include functions for connecting to snowflake, saving and loading pickles
+        Contents include functions for connecting to snowflake, saving and loading pickles. For help with what functions are available, please run help()
+        
+        # Usage
+        Currently all files are in the init.py. Import each function as needed. First time users are encouraged to import and run help() for more info.
+        
+        ````python
+        import functional_functions
+        ````
+        
+        ````python
+        from functional_functions import help, query_snowflake
+        ````
+        # Help/Issues/Bugs
+        Please contact lawrence.chin@compass.com if there are any questions, bugs, or issues.
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
