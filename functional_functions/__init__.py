@@ -10,7 +10,7 @@ def help():
     '''
     Function built to supply help about whats in this package. Please see individual
     functions for more detailed information on parameters and purpose
-    
+
 
     Function list
     ---------
@@ -20,6 +20,20 @@ def help():
     load_pickle()
     save_pickle()
     '''
+    
+    print('''
+    Function built to supply help about whats in this package. Please see individual
+    functions for more detailed information on parameters and purpose
+
+
+    Function list
+    ---------
+    get_snowflake_connection()
+    get_mysql_snowflake()
+    query_snowflake()
+    load_pickle()
+    save_pickle()
+    ''')
 
 def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None):
     '''

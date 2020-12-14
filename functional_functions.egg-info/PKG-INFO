@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: functional-functions
-Version: 0.0.3
+Version: 0.0.4
 Summary: Commonly used functions by the Compass FBI Team
 Home-page: https://github.com/UrbanCompass/Functional-Functions
 Author: Lawrence Chin
@@ -22,6 +22,10 @@ Description: # Functional-Functions
         ````python
         from functional_functions import help, query_snowflake
         ````
+        
+        # Prequisite/Additional Note
+        Some functions, especially the connections, are built off of a settings.py file which stores local creds. You can view within the package folder a sample settings file called 'settings.py.sample'. Obviously feel free to use another method to store and provide creds if you want.
+        
         # Help/Issues/Bugs
         Please contact lawrence.chin@compass.com if there are any questions, bugs, or issues.
 Platform: UNKNOWN
