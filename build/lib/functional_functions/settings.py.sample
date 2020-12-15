@@ -1,0 +1,13 @@
+# SAMPLE FILE, WILL NOT WORK UNLESS YOU TAKE OFF .sample
+# THIS SHOULD BE STORED IN YOUR SITE PACKAGES FOLDER
+
+SNOWFLAKE = {
+    'usr' :'usrname',
+    'pwd' : 'pwd',
+    'role' : 'role',
+    'warehouse_name' : 'warehouse'
+}
+
+tableau_output_file_path = 'sample file path'
+adhoc_output_file_path = 'sample file path'
+pickle_file_path = 'sample file path'

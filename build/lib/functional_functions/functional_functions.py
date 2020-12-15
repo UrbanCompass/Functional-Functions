@@ -5,9 +5,71 @@ import os
 from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 import pandas.io.sql as pdsql
+import logging
+from datetime import datetime as dt 
+import os.path
+from os import path
+
+def help():
+    '''
+    Function built to supply help about whats in this package. Please see individual
+    functions for more detailed information on parameters and purpose
 
 
-def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None):
+    Function list
+    ---------
+    get_logger()
+    get_snowflake_connection()
+    get_mysql_snowflake()
+    query_snowflake()
+    load_pickle()
+    save_pickle()
+    '''
+    
+    print('''
+    Function built to supply help about whats in this package. Please see individual
+    functions for more detailed information on parameters and purpose
+
+
+    Function list
+    ---------
+    get_snowflake_connection()
+    get_mysql_snowflake()
+    query_snowflake()
+    load_pickle()
+    save_pickle()
+    ''')
+
+def get_logger(filename):
+    '''
+    The purpose of this function is to create a somewhat standard logger for when you need to add logging to your script.
+    The function will check your provided filepath for an existing logs folder, and will create one if it does not exist.
+    
+    sample syntax on your files:
+    
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    logging = get_logger(dir_path)
+    logger = logging.getLogger(__name__)
+
+    '''
+
+    full_path = filename + '/logs'
+    if path.exists(full_path):
+        print('found')
+    else:
+        os.mkdir(filename + '/logs')
+        print('made')
+    
+    logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
+                            format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s',
+                            filemode='a',
+                            datefmt='%H:%M:%S',
+                            level=logging.INFO)
+
+    return logging
+
+def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None, schema=None):
     '''
     The purpose of this function is to get a snowflake connection using credentials, usually stored in
     a settings or creds file.
@@ -30,40 +92,60 @@ def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None):
 
     if db_name is None:
         db_name = 'PC_STITCH_DB'
-        
-    conn = snowflake.connector.connect(user=usr, 
-                           password=pwd,
-                           account='gl11689.us-east-1',
-                           warehouse=warehouse_name,
-                           role=role,
-                           database=db_name)
+    
+    if schema is None:
+        conn = snowflake.connector.connect(user=usr, 
+                            password=pwd,
+                            account='gl11689.us-east-1',
+                            warehouse=warehouse_name,
+                            role=role,
+                            database=db_name)
+    else:
+            conn = snowflake.connector.connect(user=usr, 
+                            password=pwd,
+                            account='gl11689.us-east-1',
+                            warehouse=warehouse_name,
+                            role=role,
+                            database=db_name,
+                            schema=schema)
+    
 
     #conn.cursor().execute("USE role {}".format(role))
     
     return conn
 
-def get_mysql_snowflake(usr, pwd, role, warehouse_name, db_name=None):
+def get_mysql_snowflake(usr, pwd, role, warehouse_name, db_name=None, schema=None):
     '''
     This connector is built using sqlalchemy. It's positively scientific!
 
-    This function is mostly to be used for loading data
+    This function is mostly to be used for loading data. 
 
     '''
 
     if db_name is None:
         db_name = 'PC_STITCH_DB'
     
+    if schema is None:
+        engine = create_engine(URL(
+        account='gl11689.us-east-1',
+        user=usr,
+        password=pwd,
+        database=db_name,
+        warehouse =warehouse_name,
+        role=role
+        ))
+    else:
+        engine = create_engine(URL(
+        account='gl11689.us-east-1',
+        user=usr,
+        password=pwd,
+        database=db_name,
+        warehouse =warehouse_name,
+        role=role,
+        schema=schema
+        ))
 
-    engine = create_engine(URL(
-    account='gl11689.us-east-1',
-    user=usr,
-    password=pwd,
-    database=db_name,
-    warehouse =warehouse_name,
-    role=role
-    ))
-
-    return engine.connect()
+    return engine.connect() #, engine
 
 
 def query_snowflake(query):
