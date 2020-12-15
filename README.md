@@ -16,7 +16,7 @@ from functional_functions import help, query_snowflake
 ````
 
 # Prequisite/Additional Note
-Some functions, especially the connections, are built off of a settings.py file which stores local creds. You can view within the package folder a sample settings file called 'settings.py.sample'. Obviously feel free to use another method to store and provide creds if you want.
+Some functions, especially the connections, are built off of a settings.py file which stores local creds. You can view a sample settings file called 'settings.py.sample' at the github link. Obviously feel free to use another method to store and provide creds if you want.
 
 # Help/Issues/Bugs
 Please contact lawrence.chin@compass.com if there are any questions, bugs, or issues.
