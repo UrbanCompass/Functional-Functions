@@ -15,7 +15,7 @@ import functional_functions
 from functional_functions import help, query_snowflake
 ````
 
-# Troubleshooting/Prequisite/Additional Note
+# Troubleshooting/Prequisite/Additional Notes
 Some functions, especially the connections, are built off of a settings.py file which stores local creds. You can view a sample settings file called 'settings.py.sample' in the included files. Obviously feel free to use another method to store and provide creds if you want.
 
 However if you are using 'settings.py' as your creds file, you will need to place it in your overall site-packages folder.

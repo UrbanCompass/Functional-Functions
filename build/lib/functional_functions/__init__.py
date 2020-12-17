@@ -9,6 +9,9 @@ import logging
 from datetime import datetime as dt 
 import os.path
 from os import path
+import numpy as np
+import pandas as pd
+from snowflake.connector.pandas_tools import pd_writer
 
 def help():
     '''
@@ -18,6 +21,7 @@ def help():
 
     Function list
     ---------
+    load_via_sql_snowflake()
     get_logger()
     get_snowflake_connection()
     get_mysql_snowflake()
@@ -33,12 +37,69 @@ def help():
 
     Function list
     ---------
+    load_via_sql_snowflake()
+    get_logger()
     get_snowflake_connection()
     get_mysql_snowflake()
     query_snowflake()
     load_pickle()
     save_pickle()
     ''')
+
+def load_via_sql_snowflake(load_df, tbl_name, if_exists='append', creds=None):
+    '''
+    This is the function that load pd df direct via SQL instead of a CSV fashion.
+    Currently designed to be used with sandbox or current designed database via settings file.
+    Pass in other creds if different.
+
+    Special mention to Kaili Xu for essentially successfully navigating the dumpster fire that is the python snowflake
+    connector. No idea how I would've resolved this on my own.
+    '''
+    print('loading tbl ' + tbl_name)
+
+    if creds is None:
+        creds=settings.SNOWFLAKE_FPA
+
+    try: 
+        schema = creds['schema']
+    except KeyError:
+        schema = 'FPA_SANDBOX'
+
+    #Usually this only happens when reading in from a CSV, but better to be safe than sorry
+    load_df.replace(abs(np.inf),0,inplace=True)
+    load_df.replace(-np.inf,0,inplace=True)
+
+    for col in load_df.columns:
+        #dtype of datetime
+        if load_df[col].dtype == 'datetime64[ns]':
+            try:
+                load_df[col] = pd.to_datetime(load_df[col]).dt.tz_localize('US/Eastern')
+            except ValueError:
+                pass
+
+    #TIME ZONE NEEDS TO BE SPECIFIED, somehow always defaults to UTC
+    load_df['etl_inserted_timestamp'] = pd.Timestamp.now(tz='UTC').tz_convert('US/Eastern')
+
+    #PARTICULAR ISSUES WITH COLUMN NAMES, MUST BE ALL UPPERCASE, AND CANT HAVE # or % SYMBOLS
+    def fix_column_name(name):
+        return name.upper() \
+            .replace(" ", "_") \
+            .replace("#", "_") \
+            .replace("%", "_")
+
+    load_df.columns = map(fix_column_name, load_df.columns)
+
+    conn = get_mysql_snowflake(**creds) #, engine
+    
+    if if_exists == 'replace':
+        print('dropping existing table')
+        conn.execute('drop table if exists ' + schema + '.' + tbl_name)
+
+    print('loading...')
+    load_df.to_sql(tbl_name, con=conn, index=False, if_exists='append', method=pd_writer)
+    print('all done!')
+
+    conn.close()
 
 def get_logger(filename):
     '''
@@ -148,7 +209,7 @@ def get_mysql_snowflake(usr, pwd, role, warehouse_name, db_name=None, schema=Non
     return engine.connect() #, engine
 
 
-def query_snowflake(query):
+def query_snowflake(query, q_type=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
     structure. Will open a connection, query snowflake, and close connection and return dataframe
@@ -165,7 +226,11 @@ def query_snowflake(query):
 
     '''
 
-    conn = get_snowflake_connection(**settings.SNOWFLAKE)
+
+    if q_type is not None:
+        conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
+    else:
+        conn = get_snowflake_connection(**settings.SNOWFLAKE)
 
     resp =  conn.cursor().execute(query).fetch_pandas_all()
 
