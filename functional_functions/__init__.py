@@ -46,7 +46,7 @@ def help():
     save_pickle()
     ''')
 
-def load_via_sql_snowflake(load_df, tbl_name, if_exists='append', creds=None):
+def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
     '''
     This is the function that load pd df direct via SQL instead of a CSV fashion.
     Currently designed to be used with sandbox or current designed database via settings file.
@@ -54,8 +54,19 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='append', creds=None):
 
     Special mention to Kaili Xu for essentially successfully navigating the dumpster fire that is the python snowflake
     connector. No idea how I would've resolved this on my own.
+
+    Parameters
+    ----------
+    load_df : pandas df to load
+    tbl_name : name you want the table to be
+    if_exists : default replace table, otherwise append needs to be specified
+    creds : if personal connection creds need to be passed in
+    test_mode : default None, anything else will create a table called tbl_name + '_test'
     '''
     print('loading tbl ' + tbl_name)
+
+    if test_mode is not None:
+        tbl_name += '_test'
 
     if creds is None:
         creds=settings.SNOWFLAKE_FPA
