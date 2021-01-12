@@ -128,10 +128,10 @@ def get_logger(filename):
 
     full_path = filename + '/logs'
     if path.exists(full_path):
-        print('found')
+        print('found logs file, will be creating new logger in there')
     else:
         os.mkdir(filename + '/logs')
-        print('made')
+        print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
     
     logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
                             format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s',
