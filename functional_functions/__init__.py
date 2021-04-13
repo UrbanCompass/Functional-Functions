@@ -1,7 +1,7 @@
 import snowflake.connector
 import settings
 import pickle
-import os 
+import os, sys 
 from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 import pandas.io.sql as pdsql
