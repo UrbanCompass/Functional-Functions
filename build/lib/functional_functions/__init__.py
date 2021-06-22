@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from snowflake.connector.pandas_tools import pd_writer
 import pytz
+import hashlib
 
 def help():
     '''
@@ -315,7 +316,7 @@ def load_pickle(file_name, load_date=None, file_path_option=None):
     
     return df
 
-def batch_start(test_mode, table_name):
+def batch_start(test_mode, script_name):
     '''
     This function is built to natively load into the FBI's batch table. The batch table is meant to
     track progress of script runs, this functionality will exist until a better solution is implemented.
@@ -337,8 +338,8 @@ def batch_start(test_mode, table_name):
 
     conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
 
-    q = """INSERT INTO fpa_sandbox.batch_table (batch_status,start_time,batch_hash,test_mode,tbl_name) 
-                VALUES ('Running...','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,table_name)
+    q = """INSERT INTO fpa_sandbox.batch_table (batch_status,start_time,batch_hash,test_mode,script_name) 
+                VALUES ('Running...','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,script_name)
 
     conn.cursor().execute(q)
     conn.close()
