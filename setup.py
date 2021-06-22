@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="functional-functions",
-    version = "0.2.3",
+    version = "0.2.4",
     author = "Lawrence Chin",
     author_email = "lawrence.chin@compass.com",
     description = "Commonly used functions by the Compass FBI Team",
@@ -23,7 +23,8 @@ setuptools.setup(
         "snowflake-connector-python >= 2.1.1",
         "snowflake-sqlalchemy >= 1.2.4",
         "pandas >= 1.1.4",
-        "numpy >= 1.19.4"
+        "numpy >= 1.19.4",
+        "pytz >= 2020.4"
     ],
     include_package_data=True,
     package_data={'': ['settings.py.sample']}
