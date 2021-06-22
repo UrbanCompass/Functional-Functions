@@ -44,6 +44,8 @@ def help():
     query_snowflake()
     load_pickle()
     save_pickle()
+    batch_start()
+    batch_update()
     ''')
 
 def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
@@ -300,4 +302,54 @@ def load_pickle(file_name, load_date=None, file_path_option=None):
     df = pickle.load( open (fp, "rb"))
     
     return df
+
+def start_batch(test_mode, table_name):
+    '''
+    This function is built to natively load into the FBI's batch table. The batch table is meant to
+    track progress of script runs, this functionality will exist until a better solution is implemented.
+
+    Vars
+    --------------
+    test_mode - boolean, meant to indicate if your script is testing or affecting prod. Note: User must develop own test_mode conditions,
+    this is just a boolean flag.
+
+    script_name - varchar, name of the script that is being run. e.g. transaction_line_data
+
+    Outputs
+    --------------
+    This function will return a hash_id. You must store this hash_id as it will be how you will update the status of the batch
+
+    '''
+    dt_now = pytz.timezone("US/Eastern").localize(dt.now())
+    hash_id = hashlib.md5(str(dt.now()).encode('utf-8')).hexdigest()
+
+    conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
+
+    q = """INSERT INTO fpa_sandbox.batch_table (batch_status,start_time,batch_hash,test_mode,tbl_name) 
+                VALUES ('Running...','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,table_name)
+
+    conn.cursor().execute(q)
+    conn.close()
+
+    return hash_id
+
+def batch_update(status, hash_id):
+    '''
+    This function is built to update batch_table status to either finished or failed. 
+    batch_start() must be run before this function can be called.
+
+    Vars
+    --------
+    status - indicating what status the script needs to be updated to, either 'Finished' or 'Failed'
+
+    hash_id - hash_id that was returned from batch_start()
+    '''
+
+    conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
+    
+    q = "UPDATE fpa_sandbox.batch_table SET batch_status = '{}', end_time = CURRENT_TIMESTAMP() WHERE batch_hash = '{}' ".format(status,hash_id)
+
+    conn.cursor().execute(q)
+    conn.close()
+
     
