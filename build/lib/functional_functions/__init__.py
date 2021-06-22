@@ -67,10 +67,11 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
     creds : if personal connection creds need to be passed in
     test_mode : default None, anything else will create a table called tbl_name + '_test'
     '''
-    print('loading tbl ' + tbl_name)
 
     if test_mode is not None:
         tbl_name += '_test'
+
+    print('loading tbl ' + tbl_name)
 
     if creds is None:
         creds=settings.SNOWFLAKE_FPA
@@ -143,11 +144,11 @@ def get_logger(filename):
             datefmt='%H:%M:%S',
             level=logging.INFO)
     else:
-        full_path = filename + 'logs'
+        full_path = filename + '/logs'
         if path.exists(full_path):
             print('found logs file, will be creating new logger in there')
         else:
-            os.mkdir(filename + 'logs')
+            os.mkdir(filename + '/logs')
             print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
         logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
             format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s',
