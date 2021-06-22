@@ -1,7 +1,7 @@
 import snowflake.connector
 import settings
 import pickle
-import os 
+import os, sys 
 from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 import pandas.io.sql as pdsql
@@ -127,20 +127,31 @@ def get_logger(filename):
     logger = logging.getLogger(__name__)
 
     '''
-
-    full_path = filename + '/logs'
-    if path.exists(full_path):
-        print('found logs file, will be creating new logger in there')
-    else:
-        os.mkdir(filename + '/logs')
-        print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+    if sys.platform == "win32":
+        full_path = filename + r'\logs'
+        if path.exists(full_path):
+            print('found logs file, will be creating new logger in there')
+        else:
+            os.mkdir(filename + r'\logs')
+            print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
     
-    logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
-                            format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s',
-                            filemode='a',
-                            datefmt='%H:%M:%S',
-                            level=logging.INFO)
-
+        logging.basicConfig(filename=full_path + r'\logger_' + dt.now().strftime('%Y-%m-%d %H.%M.%S') + '.log',
+            format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', 
+            filemode='a', 
+            datefmt='%H:%M:%S',
+            level=logging.INFO)
+    else:
+        full_path = filename + 'logs'
+        if path.exists(full_path):
+            print('found logs file, will be creating new logger in there')
+        else:
+            os.mkdir(filename + 'logs')
+            print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+        logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
+            format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s',
+            filemode='a',
+            datefmt='%H:%M:%S',
+            level=logging.INFO)
     return logging
 
 def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None, schema=None):
@@ -303,7 +314,7 @@ def load_pickle(file_name, load_date=None, file_path_option=None):
     
     return df
 
-def start_batch(test_mode, table_name):
+def batch_start(test_mode, table_name):
     '''
     This function is built to natively load into the FBI's batch table. The batch table is meant to
     track progress of script runs, this functionality will exist until a better solution is implemented.

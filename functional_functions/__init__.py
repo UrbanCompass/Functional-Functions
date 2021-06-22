@@ -314,7 +314,7 @@ def load_pickle(file_name, load_date=None, file_path_option=None):
     
     return df
 
-def start_batch(test_mode, table_name):
+def batch_start(test_mode, table_name):
     '''
     This function is built to natively load into the FBI's batch table. The batch table is meant to
     track progress of script runs, this functionality will exist until a better solution is implemented.
