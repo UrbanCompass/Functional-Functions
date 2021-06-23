@@ -267,31 +267,70 @@ def query_snowflake(query, q_type=None):
 
 
 
-def save_pickle(file_name, file_path_option=None):
+def save_pickle(df, file_name, folder_name=None, file_path_option=None):
     '''
-    Pickle function meant to save a file as a pickle using built-in Pickle library
+    Pickle function meant to save a file as a pickle using built-in Pickle library.
+    Will save file as 'file_name_yyyy_mm_dd.p' in specified file path.
+
+    vars
+    ------
+    df : pandas df to be pickled
+    file_name : name you want on the file
+    folder_name :  optional, folder name
+    file_path_option : optional, option for file path or custom path
 
     file_path_option are as follows:
-    'Tableau','Ad Hoc','Pickle', None
-    Note: None will default to cwd
+    - 'Tableau',
+    - 'Ad Hoc'
+    - 'Pickle'
+    - 'cwd'
+    Note: You can provide your own file path as well
     '''
 
     def file_path_loc(x):
         return {
-            None : os.path.dirname(os.path.realpath(__file__)),
+            'cwd' : os.path.dirname(os.path.realpath(__file__)),
             'Tableau' : settings.tableau_output_file_path,
-            'Ad Hoc' : settings.adhoc_output_file_path
-        }.get(x, os.path.dirname(os.path.realpath(__file__)))
-    
+            'Ad Hoc' : settings.adhoc_output_file_path,
+            'Pickle' : settings.pickle_file_path
+        }.get(x, x)
+
+    if folder_name is None:
+        folder_name = ''
+    else:
+        folder_name = folder_name + '/'
+
     fp = file_path_loc(file_path_option)
-    fp += 'pickle_data/unit_volume_asp_' + str(dt.today().date()).replace('-','_') + '.p'
+
+    if path.exists(fp + folder_name):
+        print('found path, will save pickle here')
+    else:
+        print('Unable to find path, attempting to create folder name to resolve...')
+        os.mkdir(fp + folder_name)
+
+    fp += folder_name + file_name + '_' + str(dt.today().date()).replace('-','_') + '.p'
     
-    pickle.dump(deal_data,open(fp, "wb"))
+    pickle.dump(df,open(fp, "wb"))
     print('Pickle Saved Successfully!')
 
-def load_pickle(file_name, load_date=None, file_path_option=None):
+def load_pickle(file_name, load_date=None, folder_name=None, file_path_option=None):
     '''
     Pickle function meant to load a saved pickle using built in Pickle library
+
+    vars
+    -----
+
+    file_name : name of file to be loaded from pickle
+    load_data : optional, date of pickle file, will default to current date
+    folder_name : optional, folder name to load from
+    file_path_option : optional, file path option or custom path
+
+    file_path_options
+    - Tableau
+    - Pickle
+    - Ad Hoc
+    - cwd
+    Note: you can provide your own file path as well
 
 
     '''
@@ -304,14 +343,20 @@ def load_pickle(file_name, load_date=None, file_path_option=None):
         return {
             'Tableau' : settings.tableau_output_file_path,
             'Ad Hoc' : settings.adhoc_output_file_path,
-            'Pickle': settings.pickle_file_path
-        }.get(x, default_path)  
+            'Pickle': settings.pickle_file_path,
+            'cwd' : default_path
+        }.get(x, x)  
     
     if load_date is None:
         load_date = str(dt.today().date()).replace('-','_')
     
+    if folder_name is None:
+        folder_name = ''
+    else:
+        folder_name = folder_name + '/'
+
     fp = file_path_loc(file_path_option)
-    fp += file_name + '_' + str(load_date).replace('-','_') + '.p'
+    fp += folder_name + file_name + '_' + str(load_date).replace('-','_') + '.p'
     
     df = pickle.load( open (fp, "rb"))
     
