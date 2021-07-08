@@ -14,6 +14,7 @@ import pandas as pd
 from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
+import getpass
 
 def help():
     '''
@@ -379,13 +380,14 @@ def batch_start(test_mode, script_name):
     This function will return a hash_id. You must store this hash_id as it will be how you will update the status of the batch
 
     '''
+    user_running = getpass.getuser()
     dt_now = pytz.timezone("US/Eastern").localize(dt.now())
     hash_id = hashlib.md5(str(dt.now()).encode('utf-8')).hexdigest()
 
     conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
 
-    q = """INSERT INTO fpa_sandbox.batch_table (batch_status,start_time,batch_hash,test_mode,script_name) 
-                VALUES ('Running...','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,script_name)
+    q = """INSERT INTO fpa_sandbox.batch_table (batch_status,start_time,batch_hash,test_mode,script_name, user_running) 
+                VALUES ('Running...','{}','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,script_name,user_running)
 
     conn.cursor().execute(q)
     conn.close()
