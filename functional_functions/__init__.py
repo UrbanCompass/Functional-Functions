@@ -1,5 +1,6 @@
 import snowflake.connector
 import settings
+from databricks import sql
 import pickle
 import os, sys 
 from snowflake.sqlalchemy import URL
@@ -11,6 +12,7 @@ import os.path
 from os import path
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
@@ -268,7 +270,22 @@ def query_snowflake(query, q_type=None):
 
     return resp
 
+def query_databricks(query):
 
+    connection = sql.connect(
+        server_hostname=settings.databricks_creds['jdbcHostName'],
+        http_path=settings.databricks_creds['httpPath'],
+        access_token=settings.databricks_creds['accessToken'])
+
+    cursor = connection.cursor()
+
+    cursor.execute(query)
+
+    result = DataFrame(cursor.fetchall())
+    result.columns = [x[0] for x in cursor.description]
+
+    cursor.close()
+    return result
 
 def save_pickle(df, file_name, folder_name=None, file_path_option=None):
     '''
