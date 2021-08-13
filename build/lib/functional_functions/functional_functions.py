@@ -1,12 +1,14 @@
 import snowflake.connector
 import settings
+from databricks import sql
+from pandas import DataFrame
 import pickle
-import os 
+import os
 from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 import pandas.io.sql as pdsql
 import logging
-from datetime import datetime as dt 
+from datetime import datetime as dt
 import os.path
 from os import path
 
@@ -25,7 +27,7 @@ def help():
     load_pickle()
     save_pickle()
     '''
-    
+
     print('''
     Function built to supply help about whats in this package. Please see individual
     functions for more detailed information on parameters and purpose
@@ -44,9 +46,9 @@ def get_logger(filename):
     '''
     The purpose of this function is to create a somewhat standard logger for when you need to add logging to your script.
     The function will check your provided filepath for an existing logs folder, and will create one if it does not exist.
-    
+
     sample syntax on your files:
-    
+
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     logging = get_logger(dir_path)
@@ -60,7 +62,7 @@ def get_logger(filename):
     else:
         os.mkdir(filename + '/logs')
         print('made')
-    
+
     logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
                             format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s',
                             filemode='a',
@@ -92,39 +94,39 @@ def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None, schem
 
     if db_name is None:
         db_name = 'PC_STITCH_DB'
-    
+
     if schema is None:
-        conn = snowflake.connector.connect(user=usr, 
+        conn = snowflake.connector.connect(user=usr,
                             password=pwd,
                             account='gl11689.us-east-1',
                             warehouse=warehouse_name,
                             role=role,
                             database=db_name)
     else:
-            conn = snowflake.connector.connect(user=usr, 
+            conn = snowflake.connector.connect(user=usr,
                             password=pwd,
                             account='gl11689.us-east-1',
                             warehouse=warehouse_name,
                             role=role,
                             database=db_name,
                             schema=schema)
-    
+
 
     #conn.cursor().execute("USE role {}".format(role))
-    
+
     return conn
 
 def get_mysql_snowflake(usr, pwd, role, warehouse_name, db_name=None, schema=None):
     '''
     This connector is built using sqlalchemy. It's positively scientific!
 
-    This function is mostly to be used for loading data. 
+    This function is mostly to be used for loading data.
 
     '''
 
     if db_name is None:
         db_name = 'PC_STITCH_DB'
-    
+
     if schema is None:
         engine = create_engine(URL(
         account='gl11689.us-east-1',
@@ -152,7 +154,7 @@ def query_snowflake(query):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
     structure. Will open a connection, query snowflake, and close connection and return dataframe
-    
+
     Will by default use 'SNOWFLAKE' from settings file
 
     Params
@@ -173,6 +175,22 @@ def query_snowflake(query):
 
     return resp
 
+def query_databricks(query):
+
+    connection = sql.connect(
+        server_hostname=settings.databricks_creds['jdbcHostName'],
+        http_path=settings.databricks_creds['httpPath'],
+        access_token=settings.databricks_creds['accessToken'])
+
+    cursor = connection.cursor()
+
+    cursor.execute(query)
+
+    result = DataFrame(cursor.fetchall())
+    result.columns = [x[0] for x in cursor.description]
+
+    cursor.close()
+    return result
 
 
 def save_pickle(file_name, file_path_option=None):
@@ -190,10 +208,10 @@ def save_pickle(file_name, file_path_option=None):
             'Tableau' : settings.tableau_output_file_path,
             'Ad Hoc' : settings.adhoc_output_file_path
         }.get(x, os.path.dirname(os.path.realpath(__file__)))
-    
+
     fp = file_path_loc(file_path_option)
     fp += 'pickle_data/unit_volume_asp_' + str(dt.today().date()).replace('-','_') + '.p'
-    
+
     pickle.dump(deal_data,open(fp, "wb"))
     print('Pickle Saved Successfully!')
 
@@ -203,25 +221,24 @@ def load_pickle(file_name, load_date=None, file_path_option=None):
 
 
     '''
-    try: 
+    try:
         default_path = os.path.dirname(os.path.realpath(__file__))
     except NameError:
         default_path = os.getcwd()
-    
+
     def file_path_loc(x):
         return {
             'Tableau' : settings.tableau_output_file_path,
             'Ad Hoc' : settings.adhoc_output_file_path,
             'Pickle': settings.pickle_file_path
-        }.get(x, default_path)  
-    
+        }.get(x, default_path)
+
     if load_date is None:
         load_date = str(dt.today().date()).replace('-','_')
-    
+
     fp = file_path_loc(file_path_option)
     fp += file_name + '_' + str(load_date).replace('-','_') + '.p'
-    
+
     df = pickle.load( open (fp, "rb"))
-    
+
     return df
-    
