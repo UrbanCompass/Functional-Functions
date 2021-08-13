@@ -71,6 +71,8 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     if test_mode is not None:
         tbl_name += '_test'
+        tbl_name = tbl_name.upper()
+
 
     print('loading tbl ' + tbl_name)
 
