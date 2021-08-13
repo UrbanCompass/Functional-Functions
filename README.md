@@ -12,7 +12,7 @@ import functional_functions
 ````
 
 ````python
-from functional_functions import help, query_snowflake
+from functional_functions import help, query_snowflake, query_databricks
 ````
 
 # Troubleshooting/Prequisite/Additional Notes
