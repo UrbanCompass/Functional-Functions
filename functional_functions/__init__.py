@@ -15,6 +15,7 @@ from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
 import getpass
+import jaydebeapi as jay
 
 def help():
     '''
@@ -29,6 +30,7 @@ def help():
     get_snowflake_connection()
     get_mysql_snowflake()
     query_snowflake()
+    query_redshift()
     load_pickle()
     save_pickle()
     '''
@@ -265,6 +267,51 @@ def query_snowflake(query, q_type=None):
     resp =  conn.cursor().execute(query).fetch_pandas_all()
 
     conn.close()
+
+    return resp
+
+def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
+    '''
+    ************
+    NOTE!!
+    BEFORE USING THIS FUNCTION, PLEASE FOLLOW SPECIAL INSTRUCTIONS 
+    FOR INSTALLING AND USING THIS FUNCTION ON THE README.MD
+    ************
+
+    This function is intended to allow a user to connect and query from AWS Redshift tables
+
+    parameters
+    --
+    query : str, the SQL query being used
+    dsn_dict : dict, the dictionary with connection creds, see settings.py.sample REDSHIFT_SVC_ACCT for details
+    jdbc_driver_loc : str, the filepath where the jdbc driver is stored
+
+    if no dict is provided, will default to calling settings.py creds
+    if no jdbc_driver_loc is provided, the function will not work
+    '''
+
+    if dsn_dict is None:
+        acct = settings.REDSHIFT_SVC_ACCT
+        dsn_database= acct['dsn_database']
+        dsn_hostname= acct['dsn_hostname']
+        dsn_port= acct['dsn_port']
+        dsn_uid= acct['dsn_uid']
+        dsn_pwd= acct['dsn_pwd']
+    
+    if jdbc_driver_loc is None:
+        jdbc_driver_loc = settings.redshift_driver_path
+
+    jdbc_driver_name = "com.amazon.redshift.jdbc42.Driver"
+
+    connection_string = 'jdbc:redshift://' + dsn_hostname + ':' + str(dsn_port) + '/' + dsn_database
+
+    conn = jay.connect(jdbc_driver_name, connection_string, {'user':dsn_uid, 'password': dsn_pwd}, jdbc_driver_loc)
+
+    cur = conn.cursor()
+    cur.execute(query)
+    resp = pd.DataFrame(cur.fetchall())
+    resp.columns = [x[0] for x in cur.description]
+    cur.close()
 
     return resp
 
