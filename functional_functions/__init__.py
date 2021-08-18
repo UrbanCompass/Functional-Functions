@@ -1,7 +1,8 @@
 import snowflake.connector
 import settings
 import pickle
-import os, sys 
+import os, sys
+from databricks import sql
 from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 import pandas.io.sql as pdsql
@@ -268,6 +269,22 @@ def query_snowflake(query, q_type=None):
 
     return resp
 
+
+def query_databricks(query):
+    connection = sql.connect(
+        server_hostname=settings.databricks_creds['jdbcHostName'],
+        http_path=settings.databricks_creds['httpPath'],
+        access_token=settings.databricks_creds['accessToken'])
+
+    cursor = connection.cursor()
+
+    cursor.execute(query)
+
+    result = pd.DataFrame(cursor.fetchall())
+    result.columns = [x[0] for x in cursor.description]
+
+    cursor.close()
+    return result
 
 
 def save_pickle(df, file_name, folder_name=None, file_path_option=None):
