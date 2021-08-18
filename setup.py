@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="functional-functions",
-    version = "0.3.4",
+    version = "0.3.7",
     author = "Lawrence Chin",
     author_email = "lawrence.chin@compass.com",
     description = "Commonly used functions by the Compass FBI Team",
@@ -25,7 +25,8 @@ setuptools.setup(
         "pandas >= 1.1.4",
         "numpy >= 1.19.4",
         "pytz >= 2020.4",
-        "pyarrow >= 0.17.1,<3.1.0"
+        "pyarrow >= 0.17.1,<3.1.0",
+        "jaydebeapi >= 1.2.3"
     ],
     include_package_data=True,
     package_data={'': ['settings.py.sample']}

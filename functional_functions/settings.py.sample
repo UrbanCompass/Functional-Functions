@@ -17,6 +17,15 @@ SNOWFLAKE_FPA = {
 }
 #CRUD PERMISSIONS FOR JUST SVC_ACCT_FPA_CRUD
 
+REDSHIFT_SVC_ACCT = {
+    dsn_database : 'db',
+    dsn_hostname : 'hostname',
+    dsn_port : 5439,
+    dsn_uid : 'uid',
+    dsn_pwd : 'pwd'
+}
+
+redshift_driver_path = '/Users/sample_user/Desktop/redshift-jdbc42-2.0.0.7.jar'
 
 tableau_output_file_path = 'sample file path'
 adhoc_output_file_path = 'sample file path'
