@@ -25,6 +25,12 @@ REDSHIFT_SVC_ACCT = {
     dsn_pwd : 'pwd'
 }
 
+DATABRICKS_CREDS = {
+    'jdbcHostName': jdbcHostname,
+    'httpPath': httpPath,
+    'accessToken': accessToken
+}
+
 redshift_driver_path = '/Users/sample_user/Desktop/redshift-jdbc42-2.0.0.7.jar'
 
 tableau_output_file_path = 'sample file path'
