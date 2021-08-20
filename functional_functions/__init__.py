@@ -1,7 +1,8 @@
 import snowflake.connector
 import settings
 import pickle
-import os, sys 
+import os, sys
+from databricks import sql
 from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 import pandas.io.sql as pdsql
@@ -31,8 +32,11 @@ def help():
     get_mysql_snowflake()
     query_snowflake()
     query_redshift()
+    query_databricks()
     load_pickle()
     save_pickle()
+    batch_start()
+    batch_update()
     '''
     
     print('''
@@ -47,6 +51,8 @@ def help():
     get_snowflake_connection()
     get_mysql_snowflake()
     query_snowflake()
+    query_redshift()
+    query_databricks()
     load_pickle()
     save_pickle()
     batch_start()
@@ -292,11 +298,14 @@ def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
 
     if dsn_dict is None:
         acct = settings.REDSHIFT_SVC_ACCT
-        dsn_database= acct['dsn_database']
-        dsn_hostname= acct['dsn_hostname']
-        dsn_port= acct['dsn_port']
-        dsn_uid= acct['dsn_uid']
-        dsn_pwd= acct['dsn_pwd']
+    else:
+        acct = dsn_dict
+
+    dsn_database= acct['dsn_database']
+    dsn_hostname= acct['dsn_hostname']
+    dsn_port= acct['dsn_port']
+    dsn_uid= acct['dsn_uid']
+    dsn_pwd= acct['dsn_pwd']
     
     if jdbc_driver_loc is None:
         jdbc_driver_loc = settings.redshift_driver_path
@@ -316,6 +325,56 @@ def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
     return resp
 
 
+def query_databricks(query, databricks_dict=None):
+    """
+    This function is intended to enable users to connect and query from Databricks tables!
+
+    if user inputting own dictionary then that must contain the following keys:
+    'server_hostname',
+    'http_path',
+    'access_token'
+
+    each of these can be gathered from Databricks by going to:
+    (For server_hostname and http_path)
+    Databricks --> SQL --> SQL Endpoints --> Click on Endpoint --> Connection Details
+
+    (For access_token)
+    Databricks --> SQL --> SQL Endpoints --> Click on Endpoint --> Connection Details --> Create a personal access token
+
+    parameters
+    --
+    query : str, the SQL query being used
+    databricks_dict : dict, the dictionary with connection creds, see settings.py.sample REDSHIFT_SVC_ACCT for details
+
+    if no dict is provided, will default to calling settings.py creds
+
+    """
+
+    if databricks_dict is None:
+        creds = settings.DATABRICKS_CREDS
+        # connection = sql.connect(**settings.DATABRICKS_CREDS)
+    else:
+        creds = databricks_dict
+        # connection = sql.connect(databricks_dict)
+
+    server_hostname = creds['server_hostname']
+    http_path = creds['http_path']
+    access_token = creds['access_token']
+
+    connection = sql.connect(
+        server_hostname=server_hostname,
+        http_path=http_path,
+        access_token=access_token)
+
+    cursor = connection.cursor()
+
+    cursor.execute(query)
+
+    result = pd.DataFrame(cursor.fetchall())
+    result.columns = [x[0] for x in cursor.description]
+
+    cursor.close()
+    return result
 
 def save_pickle(df, file_name, folder_name=None, file_path_option=None):
     '''
