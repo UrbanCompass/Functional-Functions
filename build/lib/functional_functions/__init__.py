@@ -1,5 +1,4 @@
 import snowflake.connector
-import settings
 import pickle
 import os, sys
 from databricks import sql
@@ -17,6 +16,14 @@ import pytz
 import hashlib
 import getpass
 import jaydebeapi as jay
+from dotenv import load_dotenv
+
+#This will allow for import and use of .env file instead
+try:
+    import settings
+except ImportError:
+    print("""We couldn\'t find your settings file. \n
+    Hopefully you have an env vars set up otherwise you will need to alter scripts to pass in creds for any query function""")
 
 def help():
     '''
@@ -63,7 +70,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
     '''
     This is the function that load pd df direct via SQL instead of a CSV fashion.
     Currently designed to be used with sandbox or current designed database via settings file.
-    Pass in other creds if different.
+    Pass in other creds if different or it will default to use of ENV vars. See creds.env.sample for env var names.
 
     Special mention to Kaili Xu for essentially successfully navigating the dumpster fire that is the python snowflake
     connector. No idea how I would've resolved this on my own.
@@ -85,12 +92,23 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
     print('loading tbl ' + tbl_name)
 
     if creds is None:
-        creds=settings.SNOWFLAKE_FPA
-
-    try: 
-        schema = creds['schema']
-    except KeyError:
-        schema = 'FPA_SANDBOX'
+        try:
+            creds = {
+                'usr' : os.environ.get('SNOWFLAKE_USR'),
+                'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+                'role' : os.environ.get('SNOWLAKE_ROLE'),
+                'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
+                'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
+                'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
+            }
+        except all(value is None for value in creds.values()):
+            creds=settings.SNOWFLAKE_FPA
+    
+    # Likely to be deprecated
+    # try: 
+    #     schema = creds['schema']
+    # except KeyError:
+    #     schema = 'FPA_SANDBOX'
 
     #Usually this only happens when reading in from a CSV, but better to be safe than sorry
     load_df.replace(abs(np.inf),0,inplace=True)
@@ -171,7 +189,7 @@ def get_logger(filename):
 def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None, schema=None):
     '''
     The purpose of this function is to get a snowflake connection using credentials, usually stored in
-    a settings or creds file.
+    a settings file or env vars.
 
     This connection is built using the snowflake connector package
 
@@ -247,16 +265,25 @@ def get_mysql_snowflake(usr, pwd, role, warehouse_name, db_name=None, schema=Non
     return engine.connect() #, engine
 
 
-def query_snowflake(query, q_type=None):
+def query_snowflake(query, creds_dict=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
     structure. Will open a connection, query snowflake, and close connection and return dataframe
     
-    Will by default use 'SNOWFLAKE' from settings file
+    Will by default use 'SNOWFLAKE' from settings file or ENV vars. See creds.env.sample for ENV var names.
 
     Params
     ------
-    query : the query str
+    query : str, the query str
+    creds_dict : dict, the creds dictionary to be passed in if you want to connect. Structure is as follows:
+    {
+    'usr' :'username',
+    'pwd' : 'pwd',
+    'role' : 'role',
+    'warehouse_name' : 'warehouse',
+    'schema' : 'schema'
+    }
+
 
     Output
     ------
@@ -264,11 +291,21 @@ def query_snowflake(query, q_type=None):
 
     '''
 
+    if creds_dict is None:
+        creds_dict = {
+            'usr' : os.environ.get('SNOWFLAKE_USR'),
+            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'role' : os.environ.get('SNOWLAKE_ROLE'),
+            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
+            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
+            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
+        }
 
-    if q_type is not None:
-        conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
-    else:
-        conn = get_snowflake_connection(**settings.SNOWFLAKE)
+        #Use settings if ENV vars are not set up
+        if all(value is None for value in creds_dict.values()):
+            creds_dict = settings.SNOWFLAKE_FPA
+
+    conn = get_snowflake_connection(**creds_dict)
 
     resp =  conn.cursor().execute(query).fetch_pandas_all()
 
@@ -289,7 +326,7 @@ def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
     parameters
     --
     query : str, the SQL query being used
-    dsn_dict : dict, the dictionary with connection creds, see settings.py.sample REDSHIFT_SVC_ACCT for details
+    dsn_dict : dict, the dictionary with connection creds, see settings.py.sample REDSHIFT_SVC_ACCT for details or creds.env.sample for ENV vars details.
     jdbc_driver_loc : str, the filepath where the jdbc driver is stored
 
     if no dict is provided, will default to calling settings.py creds
@@ -297,7 +334,19 @@ def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
     '''
 
     if dsn_dict is None:
-        acct = settings.REDSHIFT_SVC_ACCT
+    
+        acct = {
+            #REDSHIFT CREDS
+            'dsn_database' : os.environ.get('REDSHIFT_DB'),
+            'dsn_hostname' : os.environ.get('REDSHIFT_HOST'),
+            'dsn_port' : os.environ.get('REDSHIFT_PORT'),
+            'dsn_uid' : os.environ.get('REDSHIFT_USR'),
+            'dsn_pwd' : os.environ.get('REDSHIFT_PWD')
+        }
+
+        #If ENV vars are not set up, use settings
+        if all(value is None for value in acct.values()):
+            acct = settings.REDSHIFT_SVC_ACCT
     else:
         acct = dsn_dict
 
@@ -344,18 +393,24 @@ def query_databricks(query, databricks_dict=None):
     parameters
     --
     query : str, the SQL query being used
-    databricks_dict : dict, the dictionary with connection creds, see settings.py.sample REDSHIFT_SVC_ACCT for details
+    databricks_dict : dict, the dictionary with connection creds, see settings.py.sample REDSHIFT_SVC_ACCT for details or see creds.env.sample for ENV var names
 
     if no dict is provided, will default to calling settings.py creds
 
     """
 
     if databricks_dict is None:
-        creds = settings.DATABRICKS_CREDS
-        # connection = sql.connect(**settings.DATABRICKS_CREDS)
+        creds = {
+            'server_hostname' : os.environ.get('DB_HOST'),
+            'http_path' : os.environ.get('DB_PATH'),
+            'access_token' : os.environ.get('DB_TOKEN')
+        }
+
+        #IF ENV VARS are not set up, use settings
+        if all(value is None for value in creds.values()):
+            creds = settings.DATABRICKS_CREDS
     else:
         creds = databricks_dict
-        # connection = sql.connect(databricks_dict)
 
     server_hostname = creds['server_hostname']
     http_path = creds['http_path']

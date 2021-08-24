@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: functional-functions
-Version: 0.3.8
+Version: 0.4.0
 Summary: Commonly used functions by the Compass FBI Team
 Home-page: https://github.com/UrbanCompass/Functional-Functions
 Author: Lawrence Chin
@@ -44,11 +44,9 @@ Description: # Functional-Functions
         ````
         
         # Troubleshooting/Prequisite/Additional Notes
-        Some functions, especially the connections, are built off of a settings.py file which stores local creds. You can view a sample settings file called 'settings.py.sample' in the included files. Obviously feel free to use another method to store and provide creds if you want.
+        Some functions, especially the connections, are built off of a settings.py file which stores local creds. You can view a sample settings file called 'settings.py.sample' in the included files. Obviously feel free to use another method to store and provide creds if you want. We now have added the ability to directly reference environmental variables and/or a .env file. See creds.env.sample for example file.
         
-        However if you are using 'settings.py' as your creds file, you will need to place it in your overall site-packages folder.
-        
-        **NOTE**: There is currrently an issue where an additional functional_functions.py file will appear in the package. Please disregard that file for now as the actual code is stored in __init__.py. 
+        However if you are using 'settings.py' as your creds file, you will need to place it in your overall site-packages folder. If you are using 'creds.env' you will need to place it in your root folder or have a direct reference to it when you are loading it in. I'd recommend using python package python-dotenv.
         
         **NOTE**: Yes I know code shouldnt be stored in __init__.py, but I also am learning packages and such!.
         
