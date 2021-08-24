@@ -18,7 +18,7 @@ To use the redshift query connector, you must additionally ensure you have downl
     * You can usually install that from here: [JDK 16 Downloads](https://www.oracle.com/java/technologies/javase-jdk16-downloads.html)
 * JDK8 (Optional)
     * For some reason, you may need this as well? This was troubleshooting I went through for setup
-    * ````python
+    ````python
     brew tap adoptopenjdk/openjdk
     brew install --cask adoptopenjdk8
     ````
