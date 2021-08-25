@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: functional-functions
-Version: 0.4.0
+Version: 0.4.1
 Summary: Commonly used functions by the Compass FBI Team
 Home-page: https://github.com/UrbanCompass/Functional-Functions
 Author: Lawrence Chin
@@ -26,7 +26,7 @@ Description: # Functional-Functions
             * You can usually install that from here: [JDK 16 Downloads](https://www.oracle.com/java/technologies/javase-jdk16-downloads.html)
         * JDK8 (Optional)
             * For some reason, you may need this as well? This was troubleshooting I went through for setup
-            * ````python
+            ````python
             brew tap adoptopenjdk/openjdk
             brew install --cask adoptopenjdk8
             ````
@@ -52,6 +52,7 @@ Description: # Functional-Functions
         
         # Help/Issues/Bugs
         Please contact lawrence.chin@compass.com if there are any questions, bugs, or issues.
+        
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License

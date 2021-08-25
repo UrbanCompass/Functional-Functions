@@ -92,23 +92,21 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
     print('loading tbl ' + tbl_name)
 
     if creds is None:
-        try:
-            creds = {
-                'usr' : os.environ.get('SNOWFLAKE_USR'),
-                'pwd' : os.environ.get('SNOWFLAKE_PWD'),
-                'role' : os.environ.get('SNOWLAKE_ROLE'),
-                'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
-                'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
-                'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
-            }
-        except all(value is None for value in creds.values()):
+        creds = {
+            'usr' : os.environ.get('SNOWFLAKE_USR'),
+            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'role' : os.environ.get('SNOWLAKE_ROLE'),
+            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
+            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
+            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
+        }
+        if all(value is None for value in creds.values()):
             creds=settings.SNOWFLAKE_FPA
     
-    # Likely to be deprecated
-    # try: 
-    #     schema = creds['schema']
-    # except KeyError:
-    #     schema = 'FPA_SANDBOX'
+    try: 
+        schema = creds['schema']
+    except KeyError:
+        schema = 'FPA_SANDBOX'
 
     #Usually this only happens when reading in from a CSV, but better to be safe than sorry
     load_df.replace(abs(np.inf),0,inplace=True)
