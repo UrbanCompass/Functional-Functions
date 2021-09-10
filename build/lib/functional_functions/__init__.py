@@ -524,7 +524,7 @@ def load_pickle(file_name, load_date=None, folder_name=None, file_path_option=No
     
     return df
 
-def batch_start(test_mode, script_name):
+def batch_start(test_mode, script_name, creds=None):
     '''
     This function is built to natively load into the FBI's batch table. The batch table is meant to
     track progress of script runs, this functionality will exist until a better solution is implemented.
@@ -545,7 +545,19 @@ def batch_start(test_mode, script_name):
     dt_now = pytz.timezone("US/Eastern").localize(dt.now())
     hash_id = hashlib.md5(str(dt.now()).encode('utf-8')).hexdigest()
 
-    conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
+    if creds is None:
+        creds = {
+            'usr' : os.environ.get('SNOWFLAKE_USR'),
+            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'role' : os.environ.get('SNOWLAKE_ROLE'),
+            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
+            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
+            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
+        }
+        if all(value is None for value in creds.values()):
+            creds=settings.SNOWFLAKE_FPA
+            
+    conn = get_snowflake_connection(**creds)
 
     q = """INSERT INTO fpa_sandbox.batch_table (batch_status,start_time,batch_hash,test_mode,script_name, user_running) 
                 VALUES ('Running...','{}','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,script_name,user_running)
@@ -555,7 +567,7 @@ def batch_start(test_mode, script_name):
 
     return hash_id
 
-def batch_update(status, hash_id):
+def batch_update(status, hash_id, creds=None):
     '''
     This function is built to update batch_table status to either finished or failed. 
     batch_start() must be run before this function can be called.
@@ -567,7 +579,19 @@ def batch_update(status, hash_id):
     hash_id - hash_id that was returned from batch_start()
     '''
 
-    conn = get_snowflake_connection(**settings.SNOWFLAKE_FPA)
+    if creds is None:
+        creds = {
+            'usr' : os.environ.get('SNOWFLAKE_USR'),
+            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'role' : os.environ.get('SNOWLAKE_ROLE'),
+            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
+            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
+            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
+        }
+        if all(value is None for value in creds.values()):
+            creds=settings.SNOWFLAKE_FPA
+
+    conn = get_snowflake_connection(**creds)
     
     q = "UPDATE fpa_sandbox.batch_table SET batch_status = '{}', end_time = CURRENT_TIMESTAMP() WHERE batch_hash = '{}' ".format(status,hash_id)
 
