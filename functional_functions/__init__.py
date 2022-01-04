@@ -15,7 +15,8 @@ from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
 import getpass
-import jaydebeapi as jay
+# import jaydebeapi as jay
+import redshift_connector
 from dotenv import load_dotenv
 
 #This will allow for import and use of .env file instead
@@ -353,15 +354,14 @@ def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
     dsn_port= acct['dsn_port']
     dsn_uid= acct['dsn_uid']
     dsn_pwd= acct['dsn_pwd']
-    
-    if jdbc_driver_loc is None:
-        jdbc_driver_loc = settings.redshift_driver_path
 
-    jdbc_driver_name = "com.amazon.redshift.jdbc42.Driver"
-
-    connection_string = 'jdbc:redshift://' + dsn_hostname + ':' + str(dsn_port) + '/' + dsn_database
-
-    conn = jay.connect(jdbc_driver_name, connection_string, {'user':dsn_uid, 'password': dsn_pwd}, jdbc_driver_loc)
+    conn = redshift_connector.connect(
+        host=dsn_hostname,
+        port=dsn_port,
+        database=dsn_database,
+        user=dsn_uid,
+        password=dsn_pwd
+    )
 
     cur = conn.cursor()
     cur.execute(query)
