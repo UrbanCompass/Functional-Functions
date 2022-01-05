@@ -312,7 +312,7 @@ def query_snowflake(query, creds_dict=None):
 
     return resp
 
-def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
+def query_redshift(query, dsn_dict=None):
     '''
     ************
     NOTE!!
@@ -366,7 +366,10 @@ def query_redshift(query, dsn_dict=None, jdbc_driver_loc=None):
     cur = conn.cursor()
     cur.execute(query)
     resp = pd.DataFrame(cur.fetchall())
-    resp.columns = [x[0] for x in cur.description]
+    try:
+        resp.columns = [x[0].decode("utf8") for x in cur.description]
+    except:
+        resp.columns = [x[0] for x in cur.description]
     cur.close()
 
     return resp
