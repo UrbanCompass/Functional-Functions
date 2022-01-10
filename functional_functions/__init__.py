@@ -15,8 +15,8 @@ from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
 import getpass
+import base64, boto3, json, redshift_connector
 # import jaydebeapi as jay
-import redshift_connector
 from dotenv import load_dotenv
 
 #This will allow for import and use of .env file instead
@@ -601,4 +601,38 @@ def batch_update(status, hash_id, creds=None):
     conn.cursor().execute(q)
     conn.close()
 
-    
+def aws_secrets_manager_conn(secret_name, key_id = None, access_key = None):
+    try:
+        key_id = settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
+        access_key = settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
+    except: 
+        if key_id is None or access_key is None:
+            key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+    try:
+        session = boto3.session.Session()
+        client = session.client(
+            service_name='secretsmanager',
+            region_name='us-east-1',
+            aws_access_key_id= key_id,
+            aws_secret_access_key= access_key,
+            # aws_session_token= os.getenv("AWS_SESSION_TOKEN")
+        )
+
+        response = client.get_secret_value(
+            SecretId=secret_name,
+        )
+
+        secrets = json.loads(response['SecretString'])
+        return secrets
+    except Exception as e:
+        print("Please double check settings.py file or environment vars!")
+        print(str(e))
+        return None
+
+def _decode_string(value):
+    return base64.b64decode(value).decode() #.replace("\n", "")
+
+def read_value(value, encrypted=False):
+    return _decode_string(value) if encrypted else value #.replace("\n", "")
