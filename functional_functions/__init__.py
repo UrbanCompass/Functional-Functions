@@ -351,7 +351,7 @@ def query_redshift(query, dsn_dict=None):
 
     dsn_database= acct['dsn_database']
     dsn_hostname= acct['dsn_hostname']
-    dsn_port= acct['dsn_port']
+    dsn_port= int(acct['dsn_port'])
     dsn_uid= acct['dsn_uid']
     dsn_pwd= acct['dsn_pwd']
 
