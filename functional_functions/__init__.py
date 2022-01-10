@@ -16,6 +16,8 @@ import pytz
 import hashlib
 import getpass
 import base64, boto3, json, redshift_connector
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 # import jaydebeapi as jay
 from dotenv import load_dotenv
 
@@ -185,7 +187,7 @@ def get_logger(filename):
             level=logging.INFO)
     return logging
 
-def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None, schema=None):
+def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schema=None):
     '''
     The purpose of this function is to get a snowflake connection using credentials, usually stored in
     a settings file or env vars.
@@ -210,20 +212,25 @@ def get_snowflake_connection(usr, pwd, role, warehouse_name, db_name=None, schem
         db_name = 'PC_STITCH_DB'
     
     if schema is None:
-        conn = snowflake.connector.connect(user=usr, 
-                            password=pwd,
-                            account='gl11689.us-east-1',
+        conn = snowflake.connector.connect(
+                            user=usr,
+                            account="gl11689.us-east-1",
+                            private_key=pkb,
+                            role = role,
                             warehouse=warehouse_name,
-                            role=role,
-                            database=db_name)
-    else:
-            conn = snowflake.connector.connect(user=usr, 
-                            password=pwd,
-                            account='gl11689.us-east-1',
-                            warehouse=warehouse_name,
-                            role=role,
                             database=db_name,
-                            schema=schema)
+                            schema = 'NETSUITE_REPORTING'
+                            )
+    else:
+            conn = snowflake.connector.connect(
+                            user=usr,
+                            account="gl11689.us-east-1",
+                            private_key=pkb,
+                            role = role,
+                            warehouse=warehouse_name,
+                            database=db_name,
+                            schema = schema
+                            )
     
 
     #conn.cursor().execute("USE role {}".format(role))
@@ -264,7 +271,7 @@ def get_mysql_snowflake(usr, pwd, role, warehouse_name, db_name=None, schema=Non
     return engine.connect() #, engine
 
 
-def query_snowflake(query, creds_dict=None):
+def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
     structure. Will open a connection, query snowflake, and close connection and return dataframe
@@ -289,21 +296,54 @@ def query_snowflake(query, creds_dict=None):
     resp : pandas df with results from query
 
     '''
+    
+    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
+    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
+    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
+    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
+    snowflakePassPhrase = secrets['snowflake_pass_phrase']
+
+    password = _decode_string(snowflakePassPhrase).replace("\n", "")
+    password_to_byte = bytes(password, 'utf8')
+
+    private_key_to_byte = bytes(pkey, 'utf8')
+
+    p_key = serialization.load_pem_private_key(
+                    private_key_to_byte,
+                    password=password_to_byte,
+                    backend=default_backend()
+            )
+
+    pkb = p_key.private_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+
+    snowflakeUsername = secrets['snowflake_usn']
+    username = _decode_string(snowflakeUsername).replace("\n", "")
 
     if creds_dict is None:
         creds_dict = {
-            'usr' : os.environ.get('SNOWFLAKE_USR'),
-            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'usr' : username,
+            'pkb' : pkb,
             'role' : os.environ.get('SNOWLAKE_ROLE'),
             'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
             'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
-            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
+            'schema' : os.environ.get('SNOWFLAKE_SCHEMA'),
         }
 
         #Use settings if ENV vars are not set up
-        if all(value is None for value in creds_dict.values()):
-            creds_dict = settings.SNOWFLAKE_FPA
-
+        if all(value is None for value in [creds_dict['role'], creds_dict['warehouse_name'],creds_dict['db_name'], creds_dict['schema']]):
+            creds_dict = {
+                'usr' : username,
+                'pkb' : pkb,
+                'role' : settings.SNOWFLAKE_FPA['role'],
+                'warehouse_name' : settings.SNOWFLAKE_FPA['warehouse_name'],
+                'db_name' : settings.SNOWFLAKE_FPA['db_name'],
+                'schema' : settings.SNOWFLAKE_FPA['schema']
+            }
+    # get_snowflake_connection(warehouse_name, db_name=None, schema=None, usr, pkb)
     conn = get_snowflake_connection(**creds_dict)
 
     resp =  conn.cursor().execute(query).fetch_pandas_all()
@@ -601,7 +641,7 @@ def batch_update(status, hash_id, creds=None):
     conn.cursor().execute(q)
     conn.close()
 
-def aws_secrets_manager_conn(secret_name, key_id = None, access_key = None):
+def aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None):
     try:
         key_id = settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
         access_key = settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
