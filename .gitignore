@@ -20,3 +20,4 @@ tld-referral/tld_for_databricks/logs/*
 *.suo
 *.pyc
 */*.pyc
+settings.py
