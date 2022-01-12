@@ -607,19 +607,24 @@ def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds
     pkb, secrets = decrypt_aws_private_key(secret_name)
     username = decode_snowflake_username(secrets)
 
+    usn_pkb = {
+                'usr': username,
+                'pkb': pkb
+            }
+
     if creds is None:
         creds = {
-            'usr' : username,
-            'pkb' : pkb,
             'role' : os.environ.get('SNOWLAKE_ROLE'),
             'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
             'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
             'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
         }
+
         if all(value is None for value in creds.values()):
             creds=settings.SNOWFLAKE_FPA
-            creds['usr'] = username
-            creds['pkb'] = pkb
+    
+    usn_pkb.update(creds)
+    creds = usn_pkb
             
     conn = get_snowflake_connection(**creds)
 
@@ -646,19 +651,24 @@ def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None)
     pkb, secrets = decrypt_aws_private_key(secret_name)
     username = decode_snowflake_username(secrets)
 
+    usn_pkb = {
+                'usr': username,
+                'pkb': pkb
+            }
+
     if creds is None:
         creds = {
-            'usr' : username,
-            'pkb' : pkb,
             'role' : os.environ.get('SNOWLAKE_ROLE'),
             'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
             'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
             'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
         }
+
         if all(value is None for value in creds.values()):
             creds=settings.SNOWFLAKE_FPA
-            creds['usr'] = username
-            creds['pkb'] = pkb
+    
+    usn_pkb.update(creds)
+    creds = usn_pkb
 
     conn = get_snowflake_connection(**creds)
     
