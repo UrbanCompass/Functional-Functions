@@ -25,7 +25,7 @@ setuptools.setup(
         "pandas >= 1.1.4",
         "numpy >= 1.19.4",
         "pytz >= 2020.4",
-        "pyarrow >= 0.17.1,<3.1.0",
+        "pyarrow >= 0.17.1",
         "boto3 >= 1.18.54",
         "redshift-connector >= 2.0.902",
         "databricks-sql-connector >= 0.9.3",
