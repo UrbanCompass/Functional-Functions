@@ -301,7 +301,7 @@ def decrypt_aws_private_key(secret_name):
     
     return pkb, secrets
 
-def decode_snowflake_username():
+def decode_snowflake_username(secrets):
     
     snowflakeUsername = secrets['snowflake_usn']
     username = _decode_string(snowflakeUsername).replace("\n", "")
