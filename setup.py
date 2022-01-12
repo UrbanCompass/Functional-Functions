@@ -27,7 +27,7 @@ setuptools.setup(
         "pytz >= 2020.4",
         "pyarrow >= 0.17.1,<3.1.0",
         "boto3 >= 1.18.54",
-        "redshift-connector >= 2.0.902"
+        "redshift-connector >= 2.0.902",
         "databricks-sql-connector >= 0.9.3",
         "python-dotenv>=0.19.0"
     ],
