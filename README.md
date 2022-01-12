@@ -12,8 +12,6 @@ pip install functional_functions
 
 # Additional Prequisites
 To use the redshift query connector, you must additionally ensure you have downloaded/installed:
-* Redshift JDBC Driver (Mandatory)
-    * You can usually install that from here: [Amazon JDBC Driver 2.0](https://docs.aws.amazon.com/redshift/latest/mgmt/jdbc20-download-driver.html)
 * Java (Optional)
     * You can usually install that from here: [JDK 16 Downloads](https://www.oracle.com/java/technologies/javase-jdk16-downloads.html)
 * JDK8 (Optional)
