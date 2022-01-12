@@ -46,6 +46,7 @@ def help():
     save_pickle()
     batch_start()
     batch_update()
+    aws_secrets_manager_getvalues()
     '''
     
     print('''
@@ -65,6 +66,7 @@ def help():
     save_pickle()
     batch_start()
     batch_update()
+    aws_secrets_manager_getvalues()
     ''')
 
 def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
@@ -273,6 +275,39 @@ def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schem
     
     return conn
 
+def decrypt_aws_private_key(secret_name):
+    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
+    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
+    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
+    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
+    snowflakePassPhrase = secrets['snowflake_pass_phrase']
+
+    password = _decode_string(snowflakePassPhrase).replace("\n", "")
+    password_to_byte = bytes(password, 'utf8')
+
+    private_key_to_byte = bytes(pkey, 'utf8')
+
+    p_key = serialization.load_pem_private_key(
+                    private_key_to_byte,
+                    password=password_to_byte,
+                    backend=default_backend()
+            )
+
+    pkb = p_key.private_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+    
+    return pkb, secrets
+
+def decode_snowflake_username():
+    
+    snowflakeUsername = secrets['snowflake_usn']
+    username = _decode_string(snowflakeUsername).replace("\n", "")
+
+    return username
+
 def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
@@ -299,31 +334,10 @@ def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
 
     '''
     
-    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
-    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
-    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
-    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
-    snowflakePassPhrase = secrets['snowflake_pass_phrase']
+    pkb, secrets = decrypt_aws_private_key(secret_name)
+    username = decode_snowflake_username(secrets)
 
-    password = _decode_string(snowflakePassPhrase).replace("\n", "")
-    password_to_byte = bytes(password, 'utf8')
 
-    private_key_to_byte = bytes(pkey, 'utf8')
-
-    p_key = serialization.load_pem_private_key(
-                    private_key_to_byte,
-                    password=password_to_byte,
-                    backend=default_backend()
-            )
-
-    pkb = p_key.private_bytes(
-                encoding=serialization.Encoding.DER,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-
-    snowflakeUsername = secrets['snowflake_usn']
-    username = _decode_string(snowflakeUsername).replace("\n", "")
 
     if creds_dict is None:
         creds_dict = {
@@ -569,7 +583,7 @@ def load_pickle(file_name, load_date=None, folder_name=None, file_path_option=No
     
     return df
 
-def batch_start(test_mode, script_name, creds=None):
+def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds=None):
     '''
     This function is built to natively load into the FBI's batch table. The batch table is meant to
     track progress of script runs, this functionality will exist until a better solution is implemented.
@@ -590,10 +604,13 @@ def batch_start(test_mode, script_name, creds=None):
     dt_now = pytz.timezone("US/Eastern").localize(dt.now())
     hash_id = hashlib.md5(str(dt.now()).encode('utf-8')).hexdigest()
 
+    pkb, secrets = decrypt_aws_private_key(secret_name)
+    username = decode_snowflake_username(secrets)
+
     if creds is None:
         creds = {
-            'usr' : os.environ.get('SNOWFLAKE_USR'),
-            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'usr' : username,
+            'pkb' : pkb,
             'role' : os.environ.get('SNOWLAKE_ROLE'),
             'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
             'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
@@ -601,6 +618,8 @@ def batch_start(test_mode, script_name, creds=None):
         }
         if all(value is None for value in creds.values()):
             creds=settings.SNOWFLAKE_FPA
+            creds['usr'] = username
+            creds['pkb'] = pkb
             
     conn = get_snowflake_connection(**creds)
 
@@ -612,7 +631,7 @@ def batch_start(test_mode, script_name, creds=None):
 
     return hash_id
 
-def batch_update(status, hash_id, creds=None):
+def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None):
     '''
     This function is built to update batch_table status to either finished or failed. 
     batch_start() must be run before this function can be called.
@@ -624,10 +643,13 @@ def batch_update(status, hash_id, creds=None):
     hash_id - hash_id that was returned from batch_start()
     '''
 
+    pkb, secrets = decrypt_aws_private_key(secret_name)
+    username = decode_snowflake_username(secrets)
+
     if creds is None:
         creds = {
-            'usr' : os.environ.get('SNOWFLAKE_USR'),
-            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'usr' : username,
+            'pkb' : pkb,
             'role' : os.environ.get('SNOWLAKE_ROLE'),
             'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
             'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
@@ -635,6 +657,8 @@ def batch_update(status, hash_id, creds=None):
         }
         if all(value is None for value in creds.values()):
             creds=settings.SNOWFLAKE_FPA
+            creds['usr'] = username
+            creds['pkb'] = pkb
 
     conn = get_snowflake_connection(**creds)
     
@@ -644,6 +668,9 @@ def batch_update(status, hash_id, creds=None):
     conn.close()
 
 def aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None):
+    '''
+    This function's purpose is to grab the aws secrets from the secrets manager
+    '''
     try:
         key_id = settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
         access_key = settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
