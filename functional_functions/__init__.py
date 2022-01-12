@@ -2,16 +2,16 @@ import snowflake.connector
 import pickle
 import os, sys
 from databricks import sql
-from snowflake.sqlalchemy import URL
+# from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
-import pandas.io.sql as pdsql
+# import pandas.io.sql as pdsql
 import logging
 from datetime import datetime as dt 
 import os.path
 from os import path
 import numpy as np
 import pandas as pd
-from snowflake.connector.pandas_tools import pd_writer
+# from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
 import getpass
@@ -69,7 +69,7 @@ def help():
     batch_update()
     ''')
 
-def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
+def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
     '''
     This is the function that load pd df direct via SQL instead of a CSV fashion.
     Currently designed to be used with sandbox or current designed database via settings file.
@@ -94,17 +94,52 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     print('loading tbl ' + tbl_name)
 
+    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
+    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
+    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
+    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
+    snowflakePassPhrase = secrets['snowflake_pass_phrase']
+
+    password = _decode_string(snowflakePassPhrase).replace("\n", "")
+    password_to_byte = bytes(password, 'utf8')
+
+    private_key_to_byte = bytes(pkey, 'utf8')
+
+    p_key = serialization.load_pem_private_key(
+                    private_key_to_byte,
+                    password=password_to_byte,
+                    backend=default_backend()
+            )
+
+    pkb = p_key.private_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+
+    snowflakeUsername = secrets['snowflake_usn']
+    username = _decode_string(snowflakeUsername).replace("\n", "")
+
     if creds is None:
         creds = {
-            'usr' : os.environ.get('SNOWFLAKE_USR'),
-            'pwd' : os.environ.get('SNOWFLAKE_PWD'),
+            'usr' : username,
+            'pkb' : pkb,
             'role' : os.environ.get('SNOWLAKE_ROLE'),
             'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
             'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
-            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
+            'schema' : os.environ.get('SNOWFLAKE_SCHEMA'),
         }
-        if all(value is None for value in creds.values()):
-            creds=settings.SNOWFLAKE_FPA
+
+        #Use settings if ENV vars are not set up
+        if all(value is None for value in [creds['role'], creds['warehouse_name'],creds['db_name'], creds['schema']]):
+            creds = {
+                'usr' : username,
+                'pkb' : pkb,
+                'role' : settings.SNOWFLAKE_FPA['role'],
+                'warehouse_name' : settings.SNOWFLAKE_FPA['warehouse_name'],
+                'db_name' : settings.SNOWFLAKE_FPA['db_name'],
+                'schema' : settings.SNOWFLAKE_FPA['schema']
+            }
     
     try: 
         schema = creds['schema']
@@ -135,16 +170,19 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     load_df.columns = map(fix_column_name, load_df.columns)
 
-    conn = get_mysql_snowflake(**creds) #, engine
-    
+    conn = get_snowflake_connection(**creds) #, engine
+    engine = create_engine(f"snowflake://gl11689.us-east-1.snowflakecomputing.com", creator=lambda: conn)
+
     if if_exists == 'replace':
         print('dropping existing table')
-        conn.execute('drop table if exists ' + schema + '.' + tbl_name)
+        engine.connect().execute('drop table if exists ' + schema + '.' + tbl_name)
 
     print('loading...')
-    load_df.to_sql(tbl_name, con=conn, index=False, if_exists='append', method=pd_writer)
+    # load_df.to_sql(tbl_name, con=conn, index=False, if_exists='append', method=pd_writer)
+    load_df.to_sql(tbl_name, con=engine.connect(), if_exists='append', index=False)
     print('all done!')
 
+    engine.dispose()
     conn.close()
 
 def get_logger(filename):
@@ -237,40 +275,6 @@ def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schem
     
     return conn
 
-def get_mysql_snowflake(usr, pwd, role, warehouse_name, db_name=None, schema=None):
-    '''
-    This connector is built using sqlalchemy. It's positively scientific!
-
-    This function is mostly to be used for loading data. 
-
-    '''
-
-    if db_name is None:
-        db_name = 'PC_STITCH_DB'
-    
-    if schema is None:
-        engine = create_engine(URL(
-        account='gl11689.us-east-1',
-        user=usr,
-        password=pwd,
-        database=db_name,
-        warehouse =warehouse_name,
-        role=role
-        ))
-    else:
-        engine = create_engine(URL(
-        account='gl11689.us-east-1',
-        user=usr,
-        password=pwd,
-        database=db_name,
-        warehouse =warehouse_name,
-        role=role,
-        schema=schema
-        ))
-
-    return engine.connect() #, engine
-
-
 def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
@@ -283,8 +287,8 @@ def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
     query : str, the query str
     creds_dict : dict, the creds dictionary to be passed in if you want to connect. Structure is as follows:
     {
-    'usr' :'username',
-    'pwd' : 'pwd',
+    'usr' :<read from aws secret manager>,
+    'pkb' : <read from aws secret manager>,
     'role' : 'role',
     'warehouse_name' : 'warehouse',
     'schema' : 'schema'
