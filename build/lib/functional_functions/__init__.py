@@ -47,6 +47,10 @@ def help():
     batch_start()
     batch_update()
     aws_secrets_manager_getvalues()
+    decrypt_aws_private_key()
+    decode_snowflake_username()
+    _decode_string()
+    read_value()
     '''
     
     print('''
@@ -67,6 +71,10 @@ def help():
     batch_start()
     batch_update()
     aws_secrets_manager_getvalues()
+    decrypt_aws_private_key()
+    decode_snowflake_username()
+    _decode_string()
+    read_value()
     ''')
 
 def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
