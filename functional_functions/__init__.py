@@ -193,7 +193,7 @@ def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds
     print('loading...')
     # load_df.to_sql(tbl_name, con=conn, index=False, if_exists='append', method=pd_writer)
     load_df.to_sql(tbl_name, con=engine.connect(), if_exists='append', index=False, method=pd_writer)
-    print('all done!')
+    print(f'{tbl_name} has been updated in SNOWFLAKES')
 
     # conn.close()
 
@@ -783,7 +783,8 @@ def load_via_spark_dbx(value, key, exist_val, istest):
 
 def get_spark_schema(pdf):
     """
-        
+        generate spark schema based on pandas dtypes
+        currently still require some manually fixing on certain column
     """
 
     from pyspark.sql.types import StringType, IntegerType, DoubleType, DateType, BooleanType, StructField, StructType
