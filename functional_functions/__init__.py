@@ -21,7 +21,6 @@ from cryptography.hazmat.primitives import serialization
 from ff_classes import FBI_S3, DBX_sql
 
 # import jaydebeapi as jay
-# from dotenv import load_dotenv
 
 #This will allow for import and use of .env file instead
 try:
@@ -29,9 +28,6 @@ try:
 except ImportError:
     print("""We couldn\'t find your settings file. \n
     Hopefully you have an env vars set up otherwise you will need to alter scripts to pass in creds for any query function""")
-
-dbx_sql = DBX_sql()
-fbi_s3 = FBI_S3()
 
 def help():
     '''
