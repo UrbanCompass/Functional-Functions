@@ -1,11 +1,16 @@
 import os
 from databricks import sql as databricks_sql
 import pandas as pd
+import base64
+import json
 import boto3
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+
 try:
     import settings
 except ImportError:
-    print("""\n""")
+    print('\n')
 
 class FBI_S3:
     def __init__(self, key_id=os.environ.get('S3_CUSTOM_UPLOAD_KEY_ID'), access_key=os.environ.get('S3_CUSTOM_UPLOAD_ACCESS_KEY')):
@@ -24,10 +29,14 @@ class FBI_S3:
     def put(self, local_file, s3_file, target_format='parquet'):
         print(f'local_file: {local_file}')
         print(f's3_file: {s3_file}')
-        s3_put_response = self.s3_client.upload_file( 
-            Filename=local_file, 
-            Bucket=self.bucket, 
-            Key=f'Finance/Development/{s3_file}.{target_format}' )
+        try:
+            self.s3_client.upload_file( 
+                Filename=local_file, 
+                Bucket=self.bucket, 
+                Key=f'Finance/Development/{s3_file}.{target_format}' )
+            print(f'{local_file} uploaded to s3 @ {s3_file}')
+        except Exception as e:
+            print(str(e))
         # if s3_put_response['ResponseMetadata']['HTTPStatusCode']==200:
         #     print(f'{local_file} uploaded to s3://{self.bucket}/Finance/{s3_file}.{target_format}')
         # else:
@@ -73,12 +82,12 @@ class DBX_sql:
         # self.server_hostname = server_hostname
         # self.http_path = http_path
         # self.access_token = access_token
-        self.catalog_name = 'finance'
+        self.catalog_name = 'finance_accounting'
         self.connection = databricks_sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
         self.sql = databricks_sql
         self.fbi_s3 = FBI_S3()
 
-    def create_or_replace_table(self, pdf, target_file_name, test_mode = True, s3_file = None, local_path='./data', ):
+    def create_or_replace_table(self, pdf, target_file_name, test_mode = True, s3_file = None, local_path='./data'):
         """
             create or replace table in databricks
             args:
@@ -86,20 +95,23 @@ class DBX_sql:
                 target_file_name: will be used as the table name in dbx as well
         """
         if s3_file == None: s3_file = target_file_name
+        catalog = self.catalog_name
+        database = 'finance_test' if test_mode else 'finance_prod'
         self.fbi_s3.put_pandas(pdf, target_file_name, s3_file, local_path)
         print(target_file_name)
-        self.execute(f'drop table if exists finance.test.{target_file_name}')
+        self.execute(f'drop table if exists {catalog}.{database}.{target_file_name}')
         self.execute(f'''
-            create or replace table finance.test.{target_file_name}
+            create or replace table {catalog}.{database}.{target_file_name}
             using delta
-            location 's3://di-databricks-production-finance/test/{target_file_name}'
+            location 's3://di-databricks-production-finance/{database}/{target_file_name}'
             as (
                 select * from parquet. `s3://di-production-custom-uploads/Finance/Development/{s3_file}.parquet`
             );
         ''')
-        print(f'finance.test.{target_file_name} created')
+        print(f'{catalog}.{database}.{target_file_name} created')
 
-    def list_all_tables(self, catalog='finance'):
+    def list_all_tables(self, catalog_name=None):
+        catalog = self.catalog_name if catalog_name==None else catalog_name
         self.execute(query = f'''use catalog {catalog}''')
         schemas = self.execute(query = f'''show schemas''')
         tables_list = []
@@ -112,9 +124,9 @@ class DBX_sql:
 
     def query_table(self, query):
         cursor = self.connection.cursor()
+        cursor.arraysize = 200000
         cursor.execute(query)
-        result = pd.DataFrame(cursor.fetchall())
-        result.columns = [x[0] for x in cursor.description]
+        result = cursor.fetchall_arrow().to_pandas()
         cursor.close()
         return result
 

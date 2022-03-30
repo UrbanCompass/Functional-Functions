@@ -19,8 +19,9 @@ import base64, boto3, json, redshift_connector
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from ff_classes import FBI_S3, DBX_sql
+
 # import jaydebeapi as jay
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 #This will allow for import and use of .env file instead
 try:
@@ -28,6 +29,9 @@ try:
 except ImportError:
     print("""We couldn\'t find your settings file. \n
     Hopefully you have an env vars set up otherwise you will need to alter scripts to pass in creds for any query function""")
+
+dbx_sql = DBX_sql()
+fbi_s3 = FBI_S3()
 
 def help():
     '''
@@ -191,7 +195,7 @@ def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds
     load_df.to_sql(tbl_name, con=engine.connect(), if_exists='append', index=False, method=pd_writer)
     print('all done!')
 
-    conn.close()
+    # conn.close()
 
 def get_logger(filename):
     '''
@@ -723,3 +727,79 @@ def _decode_string(value):
 
 def read_value(value, encrypted=False):
     return _decode_string(value) if encrypted else value #.replace("\n", "")
+
+# dbx_sql = DBX_sql()
+# def load_via_sql_dbx(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
+#     dbx_sql.create_or_replace_table()
+
+def load_method_by_env(value, key, exist_val, istest):
+    """
+        currently load value into both dbx and snowflakes
+        dbx load using Spark API
+        snowflake load using python sql connecter
+        TODO: will consider loading into only one environment
+    """
+    if os.environ.get('environment') == 'databricks':
+        load_via_spark_dbx(value, key, exist_val, istest)
+    load_via_sql_snowflake(value, key, exist_val, istest)
+
+def load_via_spark_dbx(value, key, exist_val, istest):
+    """
+        only use on databricks, loading table via spark api
+        called by load_method_by_env()
+    """
+    from pyspark.context import SparkContext
+    from pyspark.sql.session import SparkSession
+    from pyspark.sql.utils import AnalysisException
+    
+    sc2 = SparkContext.getOrCreate()
+    spark_fbi = SparkSession(sc2)
+    # spark_fbi.conf.set('spark.default.parallelism', '32')
+    catalog = 'finance_accounting'
+    database = 'finance_test' if istest else 'finance_prod'
+    full_table_name = f'{catalog}.{database}.{key}'
+    try:
+        df = spark_fbi.table(full_table_name)
+        databricks_table_exist_flag = True
+    except AnalysisException as e:
+        # print(str(e))
+        databricks_table_exist_flag = False
+    pdf = value.astype(object).where(pd.notnull(value), None)
+    spark_schema = get_spark_schema(pdf)
+    try:
+        df = spark_fbi.createDataFrame(pdf, spark_schema)
+        # if key == 'transaction_line_data': df = df.repartition(32)
+        if databricks_table_exist_flag:
+            if exist_val == 'replace': write_mode = 'overwrite'
+            elif exist_val == 'append': write_mode = 'append'
+            df.write.format('delta').mode(write_mode).option('overwriteSchema', 'true').saveAsTable(full_table_name)
+        else:
+            df.write.format('delta') \
+                .option('path', f's3://di-databricks-production-finance/{database}/{key}') \
+                .saveAsTable(full_table_name)
+        print(f'{full_table_name} has been updated in DATABRICKS')
+    except Exception as e:
+        print(str(e))
+
+def get_spark_schema(pdf):
+    """
+        
+    """
+
+    from pyspark.sql.types import StringType, IntegerType, DoubleType, DateType, BooleanType, StructField, StructType
+
+    struct_list = []
+    for col, typ in zip(list(pdf.columns), list(pdf.infer_objects().dtypes)):
+        
+        if typ == 'object': spark_typ = StringType()
+        elif typ == 'int64': spark_typ = IntegerType()
+        else: spark_typ = DoubleType()
+            
+        if col.lower().endswith('date') or col.lower().endswith('period'): spark_typ = DateType()
+        if col == 'TRANSACTION_ID': spark_typ = IntegerType()
+        if col == 'CLEAN_ADDRESS_PARSE': spark_typ = BooleanType()
+        if col == 'same_market' or col == 'journal_entry_flag': spark_typ = BooleanType()
+        struct_list.append(StructField(col, spark_typ))
+        
+    spark_schema = StructType(struct_list)
+    return spark_schema
