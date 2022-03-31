@@ -439,7 +439,7 @@ def query_redshift(query, dsn_dict=None):
     return resp
 
 
-def query_databricks(query, databricks_dict=None):
+def query_databricks(query):
     """
     This function is intended to enable users to connect and query from Databricks tables!
 
@@ -464,37 +464,8 @@ def query_databricks(query, databricks_dict=None):
 
     """
 
-    if databricks_dict is None:
-        creds = {
-            'server_hostname' : os.environ.get('DB_HOST'),
-            'http_path' : os.environ.get('DB_PATH'),
-            'access_token' : os.environ.get('DB_TOKEN')
-        }
-
-        #IF ENV VARS are not set up, use settings
-        if all(value is None for value in creds.values()):
-            creds = settings.DATABRICKS_CREDS
-    else:
-        creds = databricks_dict
-
-    server_hostname = creds['server_hostname']
-    http_path = creds['http_path']
-    access_token = creds['access_token']
-
-    connection = sql.connect(
-        server_hostname=server_hostname,
-        http_path=http_path,
-        access_token=access_token)
-
-    cursor = connection.cursor()
-
-    cursor.execute(query)
-
-    result = pd.DataFrame(cursor.fetchall())
-    result.columns = [x[0] for x in cursor.description]
-
-    cursor.close()
-    return result
+    dbx_sql = DBX_sql()
+    return dbx_sql.query_table(query)
 
 def save_pickle(df, file_name, folder_name=None, file_path_option=None):
     '''

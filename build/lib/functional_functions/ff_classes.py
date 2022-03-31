@@ -15,10 +15,10 @@ except ImportError:
 class FBI_S3:
     def __init__(self, key_id=os.environ.get('S3_CUSTOM_UPLOAD_KEY_ID'), access_key=os.environ.get('S3_CUSTOM_UPLOAD_ACCESS_KEY')):
         if key_id == None:
-            try: key_id=settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
+            try: key_id=settings.AWS_SECRETS_MANAGER_CREDS['S3_CUSTOM_UPLOAD_KEY_ID']
             except: print('aws key management key_id NOT found, please double check')
         if access_key == None:
-            try: access_key=settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
+            try: access_key=settings.AWS_SECRETS_MANAGER_CREDS['S3_CUSTOM_UPLOAD_ACCESS_KEY']
             except: print('aws key management access_key NOT found, please double check')
         self.key_id = key_id
         self.access_key = access_key
@@ -74,14 +74,13 @@ class DBX_sql:
             try: server_hostname=settings.DATABRICKS_CREDS['jdbcHostName']
             except: print('Databricks server_hostname NOT found, please double check')
         if http_path == None:
-            try: server_hostname=settings.DATABRICKS_CREDS['httpPath']
+            try: http_path=settings.DATABRICKS_CREDS['httpPath']
             except: print('Databricks http_path NOT found, please double check')
         if access_token == None:
-            try: server_hostname=settings.DATABRICKS_CREDS['accessToken']
+            try: access_token=settings.DATABRICKS_CREDS['accessToken']
             except: print('Databricks access_token NOT found, please double check')
-        # self.server_hostname = server_hostname
-        # self.http_path = http_path
-        # self.access_token = access_token
+        
+
         self.catalog_name = 'finance_accounting'
         self.connection = databricks_sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
         self.sql = databricks_sql
