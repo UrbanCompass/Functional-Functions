@@ -18,7 +18,7 @@ import getpass
 import base64, boto3, json, redshift_connector
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from ff_classes import FBI_S3, DBX_sql
+from functional_functions.ff_classes import FBI_S3, DBX_sql
 
 # import jaydebeapi as jay
 

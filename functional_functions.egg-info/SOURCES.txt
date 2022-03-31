@@ -1,6 +1,7 @@
 README.md
 setup.py
 functional_functions/__init__.py
+functional_functions/ff_classes.py
 functional_functions.egg-info/PKG-INFO
 functional_functions.egg-info/SOURCES.txt
 functional_functions.egg-info/dependency_links.txt
