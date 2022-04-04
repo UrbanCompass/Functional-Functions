@@ -17,7 +17,7 @@ import hashlib
 import getpass
 # import json
 import redshift_connector
-from functional_functions.ff_classes import DBX_sql, AWS_Secrets
+from functional_functions.ff_classes import FBI_S3, DBX_sql, AWS_Secrets
 
 # import jaydebeapi as jay
 
