@@ -57,7 +57,9 @@ class FBI_S3:
         self.put(local_file=local_file, s3_file=s3_file)
 
     def list_all(self):
-        self.s3_client.list_objects()
+        resp = self.s3_client.list_objects(Bucket=self.bucket, Prefix='Finance')
+        pdf = pd.DataFrame.from_records(resp['Contents'])
+        return pdf
 
 class DBX_sql:
     
