@@ -77,7 +77,7 @@ def help():
     read_value()
     ''')
 
-def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
+def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
     '''
     This is the function that load pd df direct via SQL instead of a CSV fashion.
     Currently designed to be used with sandbox or current designed database via settings file.
@@ -258,7 +258,7 @@ def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schem
     
     return conn
 
-def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
+def query_snowflake(query, creds_dict=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
     structure. Will open a connection, query snowflake, and close connection and return dataframe
@@ -311,7 +311,7 @@ def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
 
     resp =  conn.cursor().execute(query).fetch_pandas_all()
 
-    conn.close()
+    # conn.close()
 
     return resp
 
@@ -501,7 +501,7 @@ def load_pickle(file_name, load_date=None, folder_name=None, file_path_option=No
     
     return df
 
-def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds=None):
+def batch_start(test_mode, script_name, creds=None):
     '''
     This function is built to natively load into the FBI's batch table. The batch table is meant to
     track progress of script runs, this functionality will exist until a better solution is implemented.
@@ -549,11 +549,11 @@ def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds
                 VALUES ('Running...','{}','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,script_name,user_running)
 
     conn.cursor().execute(q)
-    conn.close()
+    # conn.close()
 
     return hash_id
 
-def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None):
+def batch_update(status, hash_id, creds=None):
     '''
     This function is built to update batch_table status to either finished or failed. 
     batch_start() must be run before this function can be called.
@@ -591,7 +591,7 @@ def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None)
     q = "UPDATE fpa_sandbox.batch_table SET batch_status = '{}', end_time = CURRENT_TIMESTAMP() WHERE batch_hash = '{}' ".format(status,hash_id)
 
     conn.cursor().execute(q)
-    conn.close()
+    # conn.close()
 
 # dbx_sql = DBX_sql()
 # def load_via_sql_dbx(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
