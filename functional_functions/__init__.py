@@ -15,10 +15,9 @@ from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
 import getpass
-import base64, boto3, json, redshift_connector
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from functional_functions.ff_classes import FBI_S3, DBX_sql
+# import json
+import redshift_connector
+from functional_functions.ff_classes import DBX_sql, AWS_Secrets
 
 # import jaydebeapi as jay
 
@@ -103,31 +102,7 @@ def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds
 
     print('loading tbl ' + tbl_name)
 
-    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
-    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
-    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
-    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
-    snowflakePassPhrase = secrets['snowflake_pass_phrase']
-
-    password = _decode_string(snowflakePassPhrase).replace("\n", "")
-    password_to_byte = bytes(password, 'utf8')
-
-    private_key_to_byte = bytes(pkey, 'utf8')
-
-    p_key = serialization.load_pem_private_key(
-                    private_key_to_byte,
-                    password=password_to_byte,
-                    backend=default_backend()
-            )
-
-    pkb = p_key.private_bytes(
-                encoding=serialization.Encoding.DER,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-
-    snowflakeUsername = secrets['snowflake_usn']
-    username = _decode_string(snowflakeUsername).replace("\n", "")
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     if creds is None:
         creds = {
@@ -283,39 +258,6 @@ def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schem
     
     return conn
 
-def decrypt_aws_private_key(secret_name):
-    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
-    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
-    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
-    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
-    snowflakePassPhrase = secrets['snowflake_pass_phrase']
-
-    password = _decode_string(snowflakePassPhrase).replace("\n", "")
-    password_to_byte = bytes(password, 'utf8')
-
-    private_key_to_byte = bytes(pkey, 'utf8')
-
-    p_key = serialization.load_pem_private_key(
-                    private_key_to_byte,
-                    password=password_to_byte,
-                    backend=default_backend()
-            )
-
-    pkb = p_key.private_bytes(
-                encoding=serialization.Encoding.DER,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-    
-    return pkb, secrets
-
-def decode_snowflake_username(secrets):
-    
-    snowflakeUsername = secrets['snowflake_usn']
-    username = _decode_string(snowflakeUsername).replace("\n", "")
-
-    return username
-
 def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
@@ -342,10 +284,7 @@ def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
 
     '''
     
-    pkb, secrets = decrypt_aws_private_key(secret_name)
-    username = decode_snowflake_username(secrets)
-
-
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     if creds_dict is None:
         creds_dict = {
@@ -583,8 +522,7 @@ def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds
     dt_now = pytz.timezone("US/Eastern").localize(dt.now())
     hash_id = hashlib.md5(str(dt.now()).encode('utf-8')).hexdigest()
 
-    pkb, secrets = decrypt_aws_private_key(secret_name)
-    username = decode_snowflake_username(secrets)
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     usn_pkb = {
                 'usr': username,
@@ -627,8 +565,7 @@ def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None)
     hash_id - hash_id that was returned from batch_start()
     '''
 
-    pkb, secrets = decrypt_aws_private_key(secret_name)
-    username = decode_snowflake_username(secrets)
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     usn_pkb = {
                 'usr': username,
@@ -655,45 +592,6 @@ def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None)
 
     conn.cursor().execute(q)
     conn.close()
-
-def aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None):
-    '''
-    This function's purpose is to grab the aws secrets from the secrets manager
-    '''
-    try:
-        key_id = settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
-        access_key = settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
-    except: 
-        if key_id is None or access_key is None:
-            key_id = os.getenv("AWS_ACCESS_KEY_ID")
-            access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-
-    try:
-        session = boto3.session.Session()
-        client = session.client(
-            service_name='secretsmanager',
-            region_name='us-east-1',
-            aws_access_key_id= key_id,
-            aws_secret_access_key= access_key,
-            # aws_session_token= os.getenv("AWS_SESSION_TOKEN")
-        )
-
-        response = client.get_secret_value(
-            SecretId=secret_name,
-        )
-
-        secrets = json.loads(response['SecretString'])
-        return secrets
-    except Exception as e:
-        print("Please double check settings.py file or environment vars!")
-        print(str(e))
-        return None
-
-def _decode_string(value):
-    return base64.b64decode(value).decode() #.replace("\n", "")
-
-def read_value(value, encrypted=False):
-    return _decode_string(value) if encrypted else value #.replace("\n", "")
 
 # dbx_sql = DBX_sql()
 # def load_via_sql_dbx(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
