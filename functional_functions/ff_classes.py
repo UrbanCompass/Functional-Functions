@@ -137,6 +137,29 @@ class DBX_sql:
         print(result)
         return result
 
+    def grant_permissions_fbi(self, tbl_name=None):
+        """
+            default, grant permissions to FBI Team for every tables in catalog;
+            TODO: optional to specify names 
+        """
+        all_tables = self.list_all_tables()
+        for index, row in all_tables.iterrows():
+            db_name, tbl_name = row['database'], row['table_name']
+            full_name = f'{self.catalog_name}.{db_name}.{tbl_name}'
+            # print(full_name)
+            if tbl_name.lower().startswith('vw'):
+                grant_permission_query = f'GRANT SELECT ON VIEW {full_name} TO `FBI Team`'
+            else:
+                grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {full_name} TO `FBI Team`'
+            
+            try:
+                self.execute(grant_permission_query)
+            except Exception as e:
+                print(f'could not grant permission for {full_name}')
+                print(e)
+
+    
+
 class AWS_Secrets:
     """
         AWS Secrets API wrapping

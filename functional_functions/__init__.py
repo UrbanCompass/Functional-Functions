@@ -46,11 +46,7 @@ def help():
     save_pickle()
     batch_start()
     batch_update()
-    aws_secrets_manager_getvalues()
-    decrypt_aws_private_key()
-    decode_snowflake_username()
-    _decode_string()
-    read_value()
+    grant_all_permissions_dbx()
     '''
     
     print('''
@@ -70,11 +66,6 @@ def help():
     save_pickle()
     batch_start()
     batch_update()
-    aws_secrets_manager_getvalues()
-    decrypt_aws_private_key()
-    decode_snowflake_username()
-    _decode_string()
-    read_value()
     ''')
 
 def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
@@ -596,6 +587,10 @@ def batch_update(status, hash_id, creds=None):
 # dbx_sql = DBX_sql()
 # def load_via_sql_dbx(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
 #     dbx_sql.create_or_replace_table()
+
+def grant_all_permissions_dbx():
+    dbx_sql = DBX_sql()
+    return dbx_sql.grant_permissions_fbi()
 
 def load_method_by_env(value, key, exist_val, istest):
     """
