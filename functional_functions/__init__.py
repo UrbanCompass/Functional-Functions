@@ -172,6 +172,7 @@ def get_logger(filename):
     logger = logging.getLogger(__name__)
 
     '''
+
     if sys.platform == "win32":
         full_path = filename + r'\logs'
         if path.exists(full_path):
@@ -198,6 +199,68 @@ def get_logger(filename):
             datefmt='%H:%M:%S',
             level=logging.INFO)
     return logging
+
+def get_logger_v2(name=__name__, dirpath=None):
+    '''
+        updated version for get_logger()
+        args:
+            -- name: suppose to be the name of the .py file. it only control the %(name) in logging formatter
+            -- dirpath: the path to log file; will create /log dir at the same directory
+                        in order to create logs at the same level of main.py file, having loggerconf.py as a wrapper;
+                        loggerconf.py file is at the same directory with main.py file, when import find_logger() from loggerconf; the directory remians the same
+    '''
+
+    if dirpath == None:
+        dirpath = os.path.dirname(os.path.realpath(__file__))
+
+    if os.environ.get('environment') == 'databricks':
+        try:
+            logger = logging.getLogger(name)
+            # formatter = logging.Formatter("%(asctime)s %(levelname)s \t[%(filename)s:%(lineno)s - %(funcName)s()] %(message)s")	
+            formatter = logging.Formatter('%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
+            logger.setLevel(logging.INFO)
+
+            #add normal steam handler to display logs on screen
+            io_log_handler = logging.StreamHandler()
+            logger.addHandler(io_log_handler)
+
+            for handler in logger.handlers:
+                handler.setFormatter(formatter)
+        except Exception as e:
+            print(f"In Databricks Environment, cannot load logger, error: {str(e)}.")
+        return logger
+
+    else:
+        if sys.platform == "win32":
+            full_path = filename + r'\logs'
+            if path.exists(full_path):
+                print('found logs file, will be creating new logger in there')
+            else:
+                os.mkdir(filename + r'\logs')
+                print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+        
+            logging.basicConfig(filename=full_path + r'\logger_' + dt.now().strftime('%Y-%m-%d %H.%M.%S') + '.log',
+                format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', 
+                filemode='a', 
+                datefmt='%H:%M:%S',
+                level=logging.INFO)
+        else:
+            full_path = dirpath + '/logs'
+            if path.exists(full_path):
+                print('found logs file, will be creating new logger in there')
+            else:
+                os.mkdir(dirpath + '/logs')
+                # print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+            logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
+                format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s',
+                filemode='a',
+                datefmt='%H:%M:%S',
+                level=logging.INFO)
+
+        logger = logging.getLogger(name)
+        # io_log_handler = logging.StreamHandler()
+        # logger.addHandler(io_log_handler)
+        return logger
 
 def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schema=None):
     '''
