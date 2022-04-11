@@ -159,7 +159,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     # conn.close()
 
-def get_logger(name=__name__, dirpath=None):
+def get_logger(name, dirpath=None):
     '''
         updated version for get_logger()
         args:
