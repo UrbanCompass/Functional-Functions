@@ -191,11 +191,11 @@ def get_logger(name, dirpath=None):
 
     else:
         if sys.platform == "win32":
-            full_path = filename + r'\logs'
+            full_path = dirpath + r'\logs'
             if path.exists(full_path):
                 print('found logs file, will be creating new logger in there')
             else:
-                os.mkdir(filename + r'\logs')
+                os.mkdir(dirpath + r'\logs')
                 print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
         
             logging.basicConfig(filename=full_path + r'\logger_' + dt.now().strftime('%Y-%m-%d %H.%M.%S') + '.log',
