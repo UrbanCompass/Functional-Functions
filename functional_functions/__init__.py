@@ -192,29 +192,39 @@ def get_logger(name, dirpath=None):
     else:
         if sys.platform == "win32":
             full_path = dirpath + r'\logs'
-            if path.exists(full_path):
-                print('found logs file, will be creating new logger in there')
-            else:
-                os.mkdir(dirpath + r'\logs')
-                print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+            try:
+                if path.exists(full_path):
+                    # print('found logs file, will be creating new logger in there')
+                    pass
+                else:
+                    os.mkdir(dirpath + r'\logs')
+                    # print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
         
-            logging.basicConfig(filename=full_path + r'\logger_' + dt.now().strftime('%Y-%m-%d %H.%M.%S') + '.log',
-                format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', 
-                filemode='a', 
-                datefmt='%H:%M:%S',
-                level=logging.INFO)
+                logging.basicConfig(filename=full_path + r'\logger_' + dt.now().strftime('%Y-%m-%d %H.%M.%S') + '.log',
+                    format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', 
+                    filemode='a', 
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
+            except Exception as e:
+                print('could not find or create logs dir, please create manually or double check permission')
+                print(str(e))
         else:
             full_path = dirpath + '/logs'
-            if path.exists(full_path):
-                print('found logs file, will be creating new logger in there')
-            else:
-                os.mkdir(dirpath + '/logs')
-                # print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
-            logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
-                format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s',
-                filemode='a',
-                datefmt='%H:%M:%S',
-                level=logging.INFO)
+            try:
+                if path.exists(full_path):
+                    # print('found logs file, will be creating new logger in there')
+                    pass
+                else:
+                    os.mkdir(dirpath + '/logs')
+                    # print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+                logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
+                    format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s',
+                    filemode='a',
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
+            except Exception as e:
+                print('could not find or create logs dir, please create manually or double check permission')
+                print(str(e))
 
         logger = logging.getLogger(name)
         # io_log_handler = logging.StreamHandler()
