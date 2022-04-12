@@ -633,7 +633,7 @@ def load_method_by_env(value, key, exist_val, istest):
     """
     if os.environ.get('environment') == 'databricks':
         load_via_spark_dbx(value, key, exist_val, istest)
-    load_via_sql_snowflake(value, key, exist_val, istest)
+    load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=istest)
 
 def load_via_spark_dbx(value, key, exist_val, istest):
     """
