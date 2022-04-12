@@ -110,6 +110,13 @@ class DBX_sql:
             );
         ''')
         print(f'{catalog}.{database}.{target_file_name} created')
+        grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {target_file_name} TO `FBI Team`'
+        try:
+            self.execute(grant_permission_query)
+        except Exception as e:
+            print(f'could not grant permission for {target_file_name}')
+            print(e)
+
 
     def list_all_tables(self, catalog_name=None):
         catalog = self.catalog_name if catalog_name==None else catalog_name
