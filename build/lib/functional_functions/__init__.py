@@ -15,10 +15,9 @@ from snowflake.connector.pandas_tools import pd_writer
 import pytz
 import hashlib
 import getpass
-import base64, boto3, json, redshift_connector
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from functional_functions.ff_classes import FBI_S3, DBX_sql
+# import json
+import redshift_connector
+from functional_functions.ff_classes import FBI_S3, DBX_sql, AWS_Secrets
 
 # import jaydebeapi as jay
 
@@ -47,11 +46,7 @@ def help():
     save_pickle()
     batch_start()
     batch_update()
-    aws_secrets_manager_getvalues()
-    decrypt_aws_private_key()
-    decode_snowflake_username()
-    _decode_string()
-    read_value()
+    grant_all_permissions_dbx()
     '''
     
     print('''
@@ -71,14 +66,9 @@ def help():
     save_pickle()
     batch_start()
     batch_update()
-    aws_secrets_manager_getvalues()
-    decrypt_aws_private_key()
-    decode_snowflake_username()
-    _decode_string()
-    read_value()
     ''')
 
-def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
+def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
     '''
     This is the function that load pd df direct via SQL instead of a CSV fashion.
     Currently designed to be used with sandbox or current designed database via settings file.
@@ -103,31 +93,7 @@ def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds
 
     print('loading tbl ' + tbl_name)
 
-    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
-    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
-    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
-    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
-    snowflakePassPhrase = secrets['snowflake_pass_phrase']
-
-    password = _decode_string(snowflakePassPhrase).replace("\n", "")
-    password_to_byte = bytes(password, 'utf8')
-
-    private_key_to_byte = bytes(pkey, 'utf8')
-
-    p_key = serialization.load_pem_private_key(
-                    private_key_to_byte,
-                    password=password_to_byte,
-                    backend=default_backend()
-            )
-
-    pkb = p_key.private_bytes(
-                encoding=serialization.Encoding.DER,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-
-    snowflakeUsername = secrets['snowflake_usn']
-    username = _decode_string(snowflakeUsername).replace("\n", "")
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     if creds is None:
         creds = {
@@ -193,45 +159,77 @@ def load_via_sql_snowflake(load_df, tbl_name, secret_name = 'fbi_snowflake_creds
 
     # conn.close()
 
-def get_logger(filename):
+def get_logger(name, dirpath=None):
     '''
-    The purpose of this function is to create a somewhat standard logger for when you need to add logging to your script.
-    The function will check your provided filepath for an existing logs folder, and will create one if it does not exist.
-    
-    sample syntax on your files:
-    
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-
-    logging = get_logger(dir_path)
-    logger = logging.getLogger(__name__)
-
+        updated version for get_logger()
+        args:
+            -- name: suppose to be the name of the .py file. it only control the %(name) in logging formatter
+            -- dirpath: the path to log file; will create /log dir at the same directory
+                        in order to create logs at the same level of main.py file, having loggerconf.py as a wrapper;
+                        loggerconf.py file is at the same directory with main.py file, when import find_logger() from loggerconf; the directory remians the same
     '''
-    if sys.platform == "win32":
-        full_path = filename + r'\logs'
-        if path.exists(full_path):
-            print('found logs file, will be creating new logger in there')
-        else:
-            os.mkdir(filename + r'\logs')
-            print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
-    
-        logging.basicConfig(filename=full_path + r'\logger_' + dt.now().strftime('%Y-%m-%d %H.%M.%S') + '.log',
-            format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', 
-            filemode='a', 
-            datefmt='%H:%M:%S',
-            level=logging.INFO)
+
+    if dirpath == None:
+        dirpath = os.path.dirname(os.path.realpath(__file__))
+
+    if os.environ.get('environment') == 'databricks':
+        try:
+            logger = logging.getLogger(name)
+            # formatter = logging.Formatter("%(asctime)s %(levelname)s \t[%(filename)s:%(lineno)s - %(funcName)s()] %(message)s")	
+            formatter = logging.Formatter('%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
+            logger.setLevel(logging.INFO)
+
+            #add normal steam handler to display logs on screen
+            io_log_handler = logging.StreamHandler()
+            logger.addHandler(io_log_handler)
+
+            for handler in logger.handlers:
+                handler.setFormatter(formatter)
+        except Exception as e:
+            print(f"In Databricks Environment, cannot load logger, error: {str(e)}.")
+        return logger
+
     else:
-        full_path = filename + '/logs'
-        if path.exists(full_path):
-            print('found logs file, will be creating new logger in there')
+        if sys.platform == "win32":
+            full_path = dirpath + r'\logs'
+            try:
+                if path.exists(full_path):
+                    # print('found logs file, will be creating new logger in there')
+                    pass
+                else:
+                    os.mkdir(dirpath + r'\logs')
+                    # print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+        
+                logging.basicConfig(filename=full_path + r'\logger_' + dt.now().strftime('%Y-%m-%d %H.%M.%S') + '.log',
+                    format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', 
+                    filemode='a', 
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
+            except Exception as e:
+                print('could not find or create logs dir, please create manually or double check permission')
+                print(str(e))
         else:
-            os.mkdir(filename + '/logs')
-            print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
-        logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
-            format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s',
-            filemode='a',
-            datefmt='%H:%M:%S',
-            level=logging.INFO)
-    return logging
+            full_path = dirpath + '/logs'
+            try:
+                if path.exists(full_path):
+                    # print('found logs file, will be creating new logger in there')
+                    pass
+                else:
+                    os.mkdir(dirpath + '/logs')
+                    # print('You don\'t seem to have a logs file, what a shame. I\'ll go ahead and make one for you')
+                logging.basicConfig(filename=full_path + '/logger_' + str(dt.now()) + '.log',
+                    format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s',
+                    filemode='a',
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
+            except Exception as e:
+                print('could not find or create logs dir, please create manually or double check permission')
+                print(str(e))
+
+        logger = logging.getLogger(name)
+        # io_log_handler = logging.StreamHandler()
+        # logger.addHandler(io_log_handler)
+        return logger
 
 def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schema=None):
     '''
@@ -283,40 +281,7 @@ def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schem
     
     return conn
 
-def decrypt_aws_private_key(secret_name):
-    secrets = aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None)
-    KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
-    KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
-    pkey = KEY_PREFIX + '\n'.join(secrets['snowflake_secret_key'].split(' ')) + KEY_POSTFIX
-    snowflakePassPhrase = secrets['snowflake_pass_phrase']
-
-    password = _decode_string(snowflakePassPhrase).replace("\n", "")
-    password_to_byte = bytes(password, 'utf8')
-
-    private_key_to_byte = bytes(pkey, 'utf8')
-
-    p_key = serialization.load_pem_private_key(
-                    private_key_to_byte,
-                    password=password_to_byte,
-                    backend=default_backend()
-            )
-
-    pkb = p_key.private_bytes(
-                encoding=serialization.Encoding.DER,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-    
-    return pkb, secrets
-
-def decode_snowflake_username(secrets):
-    
-    snowflakeUsername = secrets['snowflake_usn']
-    username = _decode_string(snowflakeUsername).replace("\n", "")
-
-    return username
-
-def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
+def query_snowflake(query, creds_dict=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
     structure. Will open a connection, query snowflake, and close connection and return dataframe
@@ -342,10 +307,7 @@ def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
 
     '''
     
-    pkb, secrets = decrypt_aws_private_key(secret_name)
-    username = decode_snowflake_username(secrets)
-
-
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     if creds_dict is None:
         creds_dict = {
@@ -372,7 +334,7 @@ def query_snowflake(query, secret_name='fbi_snowflake_creds', creds_dict=None):
 
     resp =  conn.cursor().execute(query).fetch_pandas_all()
 
-    conn.close()
+    # conn.close()
 
     return resp
 
@@ -562,7 +524,7 @@ def load_pickle(file_name, load_date=None, folder_name=None, file_path_option=No
     
     return df
 
-def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds=None):
+def batch_start(test_mode, script_name, creds=None):
     '''
     This function is built to natively load into the FBI's batch table. The batch table is meant to
     track progress of script runs, this functionality will exist until a better solution is implemented.
@@ -583,8 +545,7 @@ def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds
     dt_now = pytz.timezone("US/Eastern").localize(dt.now())
     hash_id = hashlib.md5(str(dt.now()).encode('utf-8')).hexdigest()
 
-    pkb, secrets = decrypt_aws_private_key(secret_name)
-    username = decode_snowflake_username(secrets)
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     usn_pkb = {
                 'usr': username,
@@ -611,11 +572,11 @@ def batch_start(test_mode, script_name, secret_name='fbi_snowflake_creds', creds
                 VALUES ('Running...','{}','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,script_name,user_running)
 
     conn.cursor().execute(q)
-    conn.close()
+    # conn.close()
 
     return hash_id
 
-def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None):
+def batch_update(status, hash_id, creds=None):
     '''
     This function is built to update batch_table status to either finished or failed. 
     batch_start() must be run before this function can be called.
@@ -627,8 +588,7 @@ def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None)
     hash_id - hash_id that was returned from batch_start()
     '''
 
-    pkb, secrets = decrypt_aws_private_key(secret_name)
-    username = decode_snowflake_username(secrets)
+    username, pkb = AWS_Secrets().get_snowflake_secrets()
 
     usn_pkb = {
                 'usr': username,
@@ -654,50 +614,15 @@ def batch_update(status, hash_id, secret_name='fbi_snowflake_creds', creds=None)
     q = "UPDATE fpa_sandbox.batch_table SET batch_status = '{}', end_time = CURRENT_TIMESTAMP() WHERE batch_hash = '{}' ".format(status,hash_id)
 
     conn.cursor().execute(q)
-    conn.close()
-
-def aws_secrets_manager_getvalues(secret_name, key_id = None, access_key = None):
-    '''
-    This function's purpose is to grab the aws secrets from the secrets manager
-    '''
-    try:
-        key_id = settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
-        access_key = settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
-    except: 
-        if key_id is None or access_key is None:
-            key_id = os.getenv("AWS_ACCESS_KEY_ID")
-            access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-
-    try:
-        session = boto3.session.Session()
-        client = session.client(
-            service_name='secretsmanager',
-            region_name='us-east-1',
-            aws_access_key_id= key_id,
-            aws_secret_access_key= access_key,
-            # aws_session_token= os.getenv("AWS_SESSION_TOKEN")
-        )
-
-        response = client.get_secret_value(
-            SecretId=secret_name,
-        )
-
-        secrets = json.loads(response['SecretString'])
-        return secrets
-    except Exception as e:
-        print("Please double check settings.py file or environment vars!")
-        print(str(e))
-        return None
-
-def _decode_string(value):
-    return base64.b64decode(value).decode() #.replace("\n", "")
-
-def read_value(value, encrypted=False):
-    return _decode_string(value) if encrypted else value #.replace("\n", "")
+    # conn.close()
 
 # dbx_sql = DBX_sql()
 # def load_via_sql_dbx(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
 #     dbx_sql.create_or_replace_table()
+
+def grant_all_permissions_dbx():
+    dbx_sql = DBX_sql()
+    return dbx_sql.grant_permissions_fbi()
 
 def load_method_by_env(value, key, exist_val, istest):
     """
@@ -708,7 +633,7 @@ def load_method_by_env(value, key, exist_val, istest):
     """
     if os.environ.get('environment') == 'databricks':
         load_via_spark_dbx(value, key, exist_val, istest)
-    load_via_sql_snowflake(value, key, exist_val, istest)
+    load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=istest)
 
 def load_via_spark_dbx(value, key, exist_val, istest):
     """

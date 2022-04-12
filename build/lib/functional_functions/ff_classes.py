@@ -57,7 +57,9 @@ class FBI_S3:
         self.put(local_file=local_file, s3_file=s3_file)
 
     def list_all(self):
-        self.s3_client.list_objects()
+        resp = self.s3_client.list_objects(Bucket=self.bucket, Prefix='Finance')
+        pdf = pd.DataFrame.from_records(resp['Contents'])
+        return pdf
 
 class DBX_sql:
     
@@ -108,6 +110,13 @@ class DBX_sql:
             );
         ''')
         print(f'{catalog}.{database}.{target_file_name} created')
+        grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {catalog}.{database}.{target_file_name} TO `FBI Team`'
+        try:
+            self.execute(grant_permission_query)
+        except Exception as e:
+            print(f'could not grant permission for {target_file_name}')
+            print(e)
+
 
     def list_all_tables(self, catalog_name=None):
         catalog = self.catalog_name if catalog_name==None else catalog_name
@@ -136,3 +145,100 @@ class DBX_sql:
         cursor.close()
         print(result)
         return result
+
+    def grant_permissions_fbi(self, tbl_name=None):
+        """
+            default, grant permissions to FBI Team for every tables in catalog;
+            TODO: optional to specify names 
+        """
+        all_tables = self.list_all_tables()
+        for index, row in all_tables.iterrows():
+            db_name, tbl_name = row['database'], row['table_name']
+            full_name = f'{self.catalog_name}.{db_name}.{tbl_name}'
+            # print(full_name)
+            if tbl_name.lower().startswith('vw'):
+                grant_permission_query = f'GRANT SELECT ON VIEW {full_name} TO `FBI Team`'
+            else:
+                grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {full_name} TO `FBI Team`'
+            
+            try:
+                self.execute(grant_permission_query)
+            except Exception as e:
+                print(f'could not grant permission for {full_name}')
+                print(e)
+
+    
+
+class AWS_Secrets:
+    """
+        AWS Secrets API wrapping
+    """
+    def __init__(self, key_id=os.environ.get('AWS_ACCESS_KEY_ID'), access_key=os.environ.get('AWS_SECRET_ACCESS_KEY')):
+        if key_id == None:
+            try: key_id=settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
+            except: print('aws key management key_id NOT found, please double check')
+        if access_key == None:
+            try: access_key=settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
+            except: print('aws key management access_key NOT found, please double check')
+        
+        self.secrets_client = boto3.session.Session() \
+            .client( 
+                service_name='secretsmanager',
+                region_name='us-east-1',
+                aws_access_key_id=key_id,
+                aws_secret_access_key=access_key
+            )
+
+    def get_snowflake_secrets(self):
+        username = 'username'
+        pkey = 'pkey'
+        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_snowflake_creds')
+        username = self.decode_snowflake_username(username_encoded=secrets['snowflake_usn'])
+        pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
+        return username, pkey
+
+    def aws_secrets_manager_getvalues(self, secret_name):
+        '''
+        This function's purpose is to grab the aws secrets from the secrets manager;
+        '''
+        try:
+            if 'snowflake' in secret_name.lower():
+                secret_name='fbi_snowflake_creds'
+            response = self.secrets_client.get_secret_value(SecretId=secret_name)
+            secrets = json.loads(response['SecretString'])
+            return secrets
+        except Exception as e:
+            print("could not find the secrets; check the secret name input and credentials")
+            print(str(e))
+            return None
+
+    def _decode_string(self, value):
+        return base64.b64decode(value).decode() #.replace("\n", "")
+
+    def read_value(self, value, encrypted=False):
+        return self._decode_string(value) if encrypted else value #.replace("\n", "")
+
+    def decode_snowflake_username(self, username_encoded):
+        username = self._decode_string(username_encoded).replace("\n", "")
+        return username
+
+    def decrypt_aws_private_key(self, pkey_encrypted, pkey_passphrase):
+        KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
+        KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
+        pkey = KEY_PREFIX + '\n'.join(pkey_encrypted.split(' ')) + KEY_POSTFIX
+
+        password = self._decode_string(pkey_passphrase).replace("\n", "")
+        password_to_byte = bytes(password, 'utf8')
+        private_key_to_byte = bytes(pkey, 'utf8')
+
+        p_key = serialization.load_pem_private_key(
+                        private_key_to_byte,
+                        password=password_to_byte,
+                        backend=default_backend()
+                )
+        pkb = p_key.private_bytes(
+                    encoding=serialization.Encoding.DER,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                )
+        return pkb

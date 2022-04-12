@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="functional-functions",
-    version = "0.5.5",
+    version = "0.5.6",
     author = "Lawrence Chin",
     author_email = "lawrence.chin@compass.com",
     description = "Commonly used functions by the Compass FBI Team",
@@ -25,7 +25,7 @@ setuptools.setup(
         "pandas >= 1.1.4",
         "numpy >= 1.19.4",
         "pytz >= 2020.4",
-        "pyarrow >= 5.0.0",
+        "pyarrow >= 5.0.0, <= 6.0.0",
         "boto3 >= 1.18.54",
         "redshift-connector >= 2.0.902",
         "databricks-sql-connector >= 2.0.0b1",
