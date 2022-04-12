@@ -110,7 +110,7 @@ class DBX_sql:
             );
         ''')
         print(f'{catalog}.{database}.{target_file_name} created')
-        grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {target_file_name} TO `FBI Team`'
+        grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {catalog}.{database}.{target_file_name} TO `FBI Team`'
         try:
             self.execute(grant_permission_query)
         except Exception as e:
