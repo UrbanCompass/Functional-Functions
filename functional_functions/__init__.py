@@ -95,7 +95,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
         tbl_name = tbl_name.upper()
 
 
-    print('loading tbl ' + tbl_name)
+    print('loading tbl ' + tbl_name + 'in snowflake')
 
     username, pkb = AWS_Secrets().get_snowflake_secrets()
 
@@ -156,7 +156,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
         print('dropping existing table')
         engine.connect().execute('drop table if exists ' + schema + '.' + tbl_name)
 
-    print('loading...')
+    # print('loading...')
     # load_df.to_sql(tbl_name, con=conn, index=False, if_exists='append', method=pd_writer)
     load_df.to_sql(tbl_name, con=engine.connect(), if_exists='append', index=False, method=pd_writer)
     print(f'{tbl_name} has been updated in SNOWFLAKES')
