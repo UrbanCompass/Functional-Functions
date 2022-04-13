@@ -27,14 +27,14 @@ class FBI_S3:
         # self.dbx_sql = DBX_sql()
 
     def put(self, local_file, s3_file, target_format='parquet'):
-        print(f'local_file: {local_file}')
-        print(f's3_file: {s3_file}')
+        # print(f'local_file: {local_file}')
+        # print(f's3_file: {s3_file}')
         try:
             self.s3_client.upload_file( 
                 Filename=local_file, 
                 Bucket=self.bucket, 
                 Key=f'Finance/Development/{s3_file}.{target_format}' )
-            print(f'{local_file} uploaded to s3 @ {s3_file}')
+            print(f'local file -- {local_file} uploaded to s3')
         except Exception as e:
             print(str(e))
         # if s3_put_response['ResponseMetadata']['HTTPStatusCode']==200:
@@ -44,13 +44,13 @@ class FBI_S3:
 
     def put_pandas(self, pdf, target_file_name, s3_file, local_path='./data'):
         # if s3_file == None: s3_file = target_file_name
-        # if local_path == './data':
-        #     if not os.path.isdir(local_path):
-        #         try:
-        #             os.mkdir(local_path)
-        #         except Exception as e:
-        #             print(str(e))
-        #             print('please create ./data')
+        if local_path == './data':
+            if not os.path.isdir(local_path):
+                try:
+                    os.mkdir(local_path)
+                except Exception as e:
+                    print(str(e))
+                    print('please create ./data')
         local_file = f'{local_path}/{target_file_name}.parquet'
         pdf.astype(object).where(pd.notnull(pdf), None) \
            .to_parquet(local_file, engine='pyarrow', compression='gzip')
@@ -82,13 +82,12 @@ class DBX_sql:
             try: access_token=settings.DATABRICKS_CREDS['accessToken']
             except: print('Databricks access_token NOT found, please double check')
         
-
         self.catalog_name = 'finance_accounting'
         self.connection = databricks_sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
-        self.sql = databricks_sql
+        # self.sql = databricks_sql
         self.fbi_s3 = FBI_S3()
 
-    def create_or_replace_table(self, pdf, target_file_name, test_mode = True, s3_file = None, local_path='./data'):
+    def create_or_replace_table(self, pdf, target_file_name, local_path='./data', test_mode = True, s3_file = None):
         """
             create or replace table in databricks
             args:
@@ -99,7 +98,7 @@ class DBX_sql:
         catalog = self.catalog_name
         database = 'finance_test' if test_mode else 'finance_prod'
         self.fbi_s3.put_pandas(pdf, target_file_name, s3_file, local_path)
-        print(target_file_name)
+        # print(target_file_name)
         self.execute(f'drop table if exists {catalog}.{database}.{target_file_name}')
         self.execute(f'''
             create or replace table {catalog}.{database}.{target_file_name}
@@ -143,7 +142,7 @@ class DBX_sql:
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
-        print(result)
+        # if str(result) != '[]': print(result)
         return result
 
     def grant_permissions_fbi(self, tbl_name=None):
@@ -196,6 +195,10 @@ class AWS_Secrets:
         username = self.decode_snowflake_username(username_encoded=secrets['snowflake_usn'])
         pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
         return username, pkey
+
+    # TODO: adding
+    def get_s3_secrets(self):
+        return "aws_s3_key_id", "aws_s3_secrets"
 
     def aws_secrets_manager_getvalues(self, secret_name):
         '''

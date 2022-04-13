@@ -1,3 +1,4 @@
+from json import load
 import snowflake.connector
 import pickle
 import os, sys
@@ -47,6 +48,7 @@ def help():
     batch_start()
     batch_update()
     grant_all_permissions_dbx()
+    load_via_spark_dbx()
     '''
     
     print('''
@@ -66,6 +68,8 @@ def help():
     save_pickle()
     batch_start()
     batch_update()
+    grant_all_permissions_dbx()
+    load_via_spark_dbx()
     ''')
 
 def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
@@ -616,20 +620,46 @@ def batch_update(status, hash_id, creds=None):
     conn.cursor().execute(q)
     # conn.close()
 
-# dbx_sql = DBX_sql()
-# def load_via_sql_dbx(load_df, tbl_name, secret_name = 'fbi_snowflake_creds', if_exists='replace', creds=None, test_mode=None):
-#     dbx_sql.create_or_replace_table()
-
 def grant_all_permissions_dbx():
+    """
+        grant all permissions for FBI Team on all tables in finance_accounting catalog
+    """
     dbx_sql = DBX_sql()
-    return dbx_sql.grant_permissions_fbi()
+    dbx_sql.grant_permissions_fbi()
+
+def load_via_sql_dbx(load_df, tbl_name, local_path='./data', test_mode = True, s3_file = None):
+    """
+        This is the function that load pd df into databricks finance_accounting catalog
+        the function will save the pandas df as a parquet file and upload to s3 bucket (custom-upload/finance),
+        (the parquet file will be saved in data folder, or you can custimize the location by providing local_path parameter)
+        then databricks will read this parquet file and save as a delta table in finance_accounting catalog.
+
+        Parameters
+        ----------
+        load_df : pandas df to load
+        tbl_name : name you want the table to create
+        local_path : the location you want to save the parquet file
+        test_mode : default True, the table will be created in finance_test database; recommand leave as default
+        s3_file: the file name in s3 bucket, default None and will be the same as tbl_name; recommand leave as default
+    """
+    dbx_sql = DBX_sql()
+    dbx_sql.create_or_replace_table(load_df=load_df, tbl_name=tbl_name, local_path='./data', test_mode = True, s3_file = None)
+
+def list_dbx_tables(catalog_name=None):
+    """
+        return a pandas dataframe showing all tables in one catalog
+        default catalog is finance_accounting if catalog_name is None, can also put like main, check databricks ui if needed 
+    """
+    dbx_sql = DBX_sql()
+    pdf = dbx_sql.list_all_tables(catalog_name=catalog_name)
+    return pdf
 
 def load_method_by_env(value, key, exist_val, istest):
     """
         currently load value into both dbx and snowflakes
         dbx load using Spark API
         snowflake load using python sql connecter
-        TODO: will consider loading into only one environment
+        TODO: will consider loading into only one environment, when snowflake is retired
     """
     if os.environ.get('environment') == 'databricks':
         load_via_spark_dbx(value, key, exist_val, istest)
