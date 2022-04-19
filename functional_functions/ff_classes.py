@@ -16,10 +16,10 @@ class FBI_S3:
     def __init__(self, key_id=os.environ.get('S3_CUSTOM_UPLOAD_KEY_ID'), access_key=os.environ.get('S3_CUSTOM_UPLOAD_ACCESS_KEY')):
         if key_id == None:
             try: key_id=settings.AWS_SECRETS_MANAGER_CREDS['S3_CUSTOM_UPLOAD_KEY_ID']
-            except: print('aws key management key_id NOT found, please double check')
+            except: print('aws s3 key management key_id NOT found, please double check')
         if access_key == None:
             try: access_key=settings.AWS_SECRETS_MANAGER_CREDS['S3_CUSTOM_UPLOAD_ACCESS_KEY']
-            except: print('aws key management access_key NOT found, please double check')
+            except: print('aws s3 key management access_key NOT found, please double check')
         self.key_id = key_id
         self.access_key = access_key
         self.bucket = 'di-production-custom-uploads'
@@ -175,10 +175,10 @@ class AWS_Secrets:
     def __init__(self, key_id=os.environ.get('AWS_ACCESS_KEY_ID'), access_key=os.environ.get('AWS_SECRET_ACCESS_KEY')):
         if key_id == None:
             try: key_id=settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
-            except: print('aws key management key_id NOT found, please double check')
+            except: print('aws secrets management key_id NOT found, please double check')
         if access_key == None:
             try: access_key=settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
-            except: print('aws key management access_key NOT found, please double check')
+            except: print('aws secrets key management access_key NOT found, please double check')
         
         self.secrets_client = boto3.session.Session() \
             .client( 
@@ -189,8 +189,8 @@ class AWS_Secrets:
             )
 
     def get_snowflake_secrets(self):
-        username = 'username'
-        pkey = 'pkey'
+        # username = 'username'
+        # pkey = 'pkey'
         secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_snowflake_creds')
         username = self.decode_snowflake_username(username_encoded=secrets['snowflake_usn'])
         pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
