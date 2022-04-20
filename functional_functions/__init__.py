@@ -699,6 +699,7 @@ def load_via_spark_dbx(value, key, exist_val, istest):
             df.write.format('delta') \
                 .option('path', f's3://di-databricks-production-finance/{database}/{key}') \
                 .saveAsTable(full_table_name)
+            spark_fbi.sql(f'GRANT ALL PRIVILEGES ON TABLE {catalog}.{database}.{key} TO `FBI Team`')
         print(f'{full_table_name} has been updated in DATABRICKS')
     except Exception as e:
         print(str(e))
