@@ -85,7 +85,6 @@ class DBX_sql:
         self.catalog_name = 'finance_accounting'
         self.connection = databricks_sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
         # self.sql = databricks_sql
-        self.fbi_s3 = FBI_S3()
 
     def create_or_replace_table(self, pdf, target_file_name, local_path='./data', test_mode = True, s3_file = None):
         """
@@ -94,10 +93,11 @@ class DBX_sql:
                 pdf: pandas df needs to be save to databricks (will be save as parquet in local first)
                 target_file_name: will be used as the table name in dbx as well
         """
+        fbi_s3 = FBI_S3()
         if s3_file == None: s3_file = target_file_name
         catalog = self.catalog_name
         database = 'finance_test' if test_mode else 'finance_prod'
-        self.fbi_s3.put_pandas(pdf, target_file_name, s3_file, local_path)
+        fbi_s3.put_pandas(pdf, target_file_name, s3_file, local_path)
         # print(target_file_name)
         self.execute(f'drop table if exists {catalog}.{database}.{target_file_name}')
         self.execute(f'''
@@ -115,7 +115,6 @@ class DBX_sql:
         except Exception as e:
             print(f'could not grant permission for {target_file_name}')
             print(e)
-
 
     def list_all_tables(self, catalog_name=None):
         catalog = self.catalog_name if catalog_name==None else catalog_name
