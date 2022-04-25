@@ -195,6 +195,13 @@ class AWS_Secrets:
         pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
         return username, pkey
 
+    def get_dbx_secrets(self):
+        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_dbx_vars')
+        dbx_host = secrets['dbx_host']
+        dbx_path = secrets['dbx_path']
+        dbx_token = secrets['dbx_token']
+        return dbx_host, dbx_path, dbx_token
+
     # TODO: adding
     def get_s3_secrets(self):
         return "aws_s3_key_id", "aws_s3_secrets"

@@ -405,7 +405,7 @@ def query_redshift(query, dsn_dict=None):
     return resp
 
 
-def query_databricks(query):
+def query_databricks(query, use_service_account = False):
     """
     This function is intended to enable users to connect and query from Databricks tables!
 
@@ -429,8 +429,11 @@ def query_databricks(query):
     if no dict is provided, will default to calling settings.py creds
 
     """
-
-    dbx_sql = DBX_sql()
+    if use_service_account or os.environ.get('environment') == 'databricks':
+        dbx_host, dbx_path, dbx_token = AWS_Secrets().get_dbx_secrets()
+        dbx_sql = DBX_sql(server_hostname=dbx_host, http_path=dbx_path, access_token=dbx_token)
+    else:
+        dbx_sql = DBX_sql()
     return dbx_sql.query_table(query)
 
 def save_pickle(df, file_name, folder_name=None, file_path_option=None):
@@ -654,6 +657,12 @@ def list_dbx_tables(catalog_name=None):
     pdf = dbx_sql.list_all_tables(catalog_name=catalog_name)
     return pdf
 
+def query_method_by_env_dbx(query):
+    if os.environ.get('environment') == 'databricks':
+        query_via_spark_dbx(query)
+    else:
+        query_databricks(query)
+
 def load_method_by_env(value, key, exist_val, istest):
     """
         currently load value into both dbx and snowflakes
@@ -703,6 +712,22 @@ def load_via_spark_dbx(value, key, exist_val, istest):
         print(f'{full_table_name} has been updated in DATABRICKS')
     except Exception as e:
         print(str(e))
+
+def query_via_spark_dbx(query):
+    """
+        query through spark API, only for Spark env
+    """
+    from pyspark.context import SparkContext
+    from pyspark.sql.session import SparkSession
+    from pyspark.sql.utils import AnalysisException
+    
+    sc2 = SparkContext.getOrCreate()
+    spark_fbi = SparkSession(sc2)
+    spark_fbi.conf.set("spark.sql.execution.arrow.enabled","true")
+    df = spark_fbi.sql(query)
+    pdf = spark_fbi.createDataFrame(df)
+    return pdf
+
 
 def get_spark_schema(pdf):
     """
