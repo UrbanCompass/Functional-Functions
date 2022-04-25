@@ -725,7 +725,7 @@ def query_via_spark_dbx(query):
     spark_fbi = SparkSession(sc2)
     spark_fbi.conf.set("spark.sql.execution.arrow.enabled","true")
     df = spark_fbi.sql(query)
-    pdf = spark_fbi.createDataFrame(df)
+    pdf = df.toPandas()
     return pdf
 
 def get_spark_schema(pdf):
