@@ -661,7 +661,7 @@ def query_method_by_env_dbx(query):
     if os.environ.get('environment') == 'databricks':
         query_via_spark_dbx(query)
     else:
-        query_databricks(query)
+        query_databricks(query, True)
 
 def load_method_by_env(value, key, exist_val, istest):
     """
