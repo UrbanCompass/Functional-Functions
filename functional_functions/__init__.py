@@ -659,10 +659,10 @@ def list_dbx_tables(catalog_name=None):
 
 def query_method_by_env_dbx(query):
     if os.environ.get('environment') == 'databricks':
-        query_via_spark_dbx(query)
+        return query_via_spark_dbx(query)
     else:
-        query_databricks(query, True)
-
+        return query_databricks(query, True)
+    
 def load_method_by_env(value, key, exist_val, istest):
     """
         currently load value into both dbx and snowflakes
@@ -727,7 +727,6 @@ def query_via_spark_dbx(query):
     df = spark_fbi.sql(query)
     pdf = spark_fbi.createDataFrame(df)
     return pdf
-
 
 def get_spark_schema(pdf):
     """
