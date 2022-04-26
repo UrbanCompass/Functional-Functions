@@ -49,6 +49,7 @@ def help():
     batch_update()
     grant_all_permissions_dbx()
     load_via_spark_dbx()
+    (only for ETL) query_method_by_env_dbx(query, use_service_account = False)
     '''
     
     print('''
@@ -70,6 +71,7 @@ def help():
     batch_update()
     grant_all_permissions_dbx()
     load_via_spark_dbx()
+    (only for ETL) query_method_by_env_dbx(query, use_service_account = False)
     ''')
 
 def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
@@ -657,11 +659,20 @@ def list_dbx_tables(catalog_name=None):
     pdf = dbx_sql.list_all_tables(catalog_name=catalog_name)
     return pdf
 
-def query_method_by_env_dbx(query):
+# TODO: consider using Spark API to load data if running on databricks
+def query_method_by_env_dbx(query, use_service_account = False):
+    """
+        use in ETL pipeline
+        Load data through Spark API if on databricks;
+        use sql endpoint if in local environment
+    """
+    # query_databricks() using sql endpoint to load data, the performance is bad compare with query_snowflake (as of 4/22/2022)
+    # to improve performance, will need to install additional driver which is not available on dbx;
+    # therefore, using spark api (there is downside, causing warning for datatime schema!!)
     if os.environ.get('environment') == 'databricks':
         return query_via_spark_dbx(query)
     else:
-        return query_databricks(query, True)
+        return query_databricks(query, use_service_account)
     
 def load_method_by_env(value, key, exist_val, istest):
     """
@@ -673,6 +684,7 @@ def load_method_by_env(value, key, exist_val, istest):
     if os.environ.get('environment') == 'databricks':
         load_via_spark_dbx(value, key, exist_val, istest)
     load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=istest)
+    # load_via_sql_dbx(load_df=value, tbl_name=key, test_mode=istest)
 
 def load_via_spark_dbx(value, key, exist_val, istest):
     """
@@ -716,6 +728,8 @@ def load_via_spark_dbx(value, key, exist_val, istest):
 def query_via_spark_dbx(query):
     """
         query through spark API, only for Spark env
+        only use on databricks, loading table via spark api
+        call by query_method_by_env
     """
     from pyspark.context import SparkContext
     from pyspark.sql.session import SparkSession
@@ -723,7 +737,8 @@ def query_via_spark_dbx(query):
     
     sc2 = SparkContext.getOrCreate()
     spark_fbi = SparkSession(sc2)
-    spark_fbi.conf.set("spark.sql.execution.arrow.enabled","true")
+    # TODO: this is causing error, because of some unsupported schema (datatime64?)
+    # spark_fbi.conf.set("spark.sql.execution.arrow.enabled","true")
     df = spark_fbi.sql(query)
     pdf = df.toPandas()
     return pdf
