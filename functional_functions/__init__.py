@@ -767,7 +767,7 @@ def get_spark_schema(pdf):
         
         if typ == 'object': spark_typ = StringType()
         elif typ == 'int64': spark_typ = IntegerType()
-        elif typ == 'datetime64': spark_typ = TimestampType()
+        elif typ == 'datetime64[ns]' or typ == 'datetime64': spark_typ = TimestampType()
         else: spark_typ = DoubleType()
         
 
