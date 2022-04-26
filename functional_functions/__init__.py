@@ -762,14 +762,17 @@ def get_spark_schema(pdf):
     from pyspark.sql.types import StringType, IntegerType, DoubleType, DateType, TimestampType, BooleanType, StructField, StructType
 
     struct_list = []
+    datetime64_cols = ['FinalClosingDate']
     for col, typ in zip(list(pdf.columns), list(pdf.infer_objects().dtypes)):
         
         if typ == 'object': spark_typ = StringType()
         elif typ == 'int64': spark_typ = IntegerType()
         elif typ == 'datetime64': spark_typ = TimestampType()
         else: spark_typ = DoubleType()
-            
-        if col.lower().endswith('date') or col.lower().endswith('period'): spark_typ = DateType()
+        
+
+        if (col.lower().endswith('date') or col.lower().endswith('period')) and (~col.lower().isin(datetime64_cols)): 
+            spark_typ = DateType()
         if col == 'TRANSACTION_ID': spark_typ = IntegerType()
         if col == 'CLEAN_ADDRESS_PARSE': spark_typ = BooleanType()
         if col == 'same_market' or col == 'journal_entry_flag': spark_typ = BooleanType()
