@@ -669,6 +669,8 @@ def query_method_by_env_dbx(query, use_service_account = False):
     # query_databricks() using sql endpoint to load data, the performance is bad compare with query_snowflake (as of 4/22/2022)
     # to improve performance, will need to install additional driver which is not available on dbx;
     # therefore, using spark api (there is downside, causing warning for datatime schema!!)
+
+    # print is for test purpose, will remove when pr or next version (for user better understanding the logic)
     if os.environ.get('environment') == 'databricks':
         print('query via spark api, converting to pandas dataframe')
         return query_via_spark_dbx(query)
@@ -757,13 +759,14 @@ def get_spark_schema(pdf):
         currently still require some manually fixing on certain column
     """
 
-    from pyspark.sql.types import StringType, IntegerType, DoubleType, DateType, BooleanType, StructField, StructType
+    from pyspark.sql.types import StringType, IntegerType, DoubleType, DateType, TimestampType, BooleanType, StructField, StructType
 
     struct_list = []
     for col, typ in zip(list(pdf.columns), list(pdf.infer_objects().dtypes)):
         
         if typ == 'object': spark_typ = StringType()
         elif typ == 'int64': spark_typ = IntegerType()
+        elif typ == 'datatime64': spark_typ = TimestampType()
         else: spark_typ = DoubleType()
             
         if col.lower().endswith('date') or col.lower().endswith('period'): spark_typ = DateType()
