@@ -431,7 +431,7 @@ def query_databricks(query, use_service_account = False):
     if no dict is provided, will default to calling settings.py creds
 
     """
-    if use_service_account or os.environ.get('environment') == 'databricks':
+    if use_service_account == True or os.environ.get('environment') == 'databricks':
         dbx_host, dbx_path, dbx_token = AWS_Secrets().get_dbx_secrets()
         dbx_sql = DBX_sql(server_hostname=dbx_host, http_path=dbx_path, access_token=dbx_token)
     else:
@@ -673,8 +673,7 @@ def query_method_by_env_dbx(query, use_service_account = False):
         print('query via spark api, converting to pandas dataframe')
         return query_via_spark_dbx(query)
     else:
-        if use_service_account:
-            print('query via sql endpoint, using service account creds')
+        if use_service_account == True: print('query via sql endpoint, using service account creds')
         else: print('query via sql endpoint, using personal account')
         return query_databricks(query, use_service_account)
     
