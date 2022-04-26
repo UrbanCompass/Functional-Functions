@@ -684,9 +684,12 @@ def load_method_by_env(value, key, exist_val, istest):
         snowflake load using python sql connecter
         TODO: will consider loading into only one environment, when snowflake is retired
     """
+    if istest == False or istest == "False" or istest == None:
+        testflag = False
+    else: testflag = True
     if os.environ.get('environment') == 'databricks':
-        load_via_spark_dbx(value, key, exist_val, istest)
-    load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=istest)
+        load_via_spark_dbx(value, key, exist_val, istest=testflag)
+    load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=testflag)
     # load_via_sql_dbx(load_df=value, tbl_name=key, test_mode=istest)
 
 def load_via_spark_dbx(value, key, exist_val, istest):
@@ -701,8 +704,10 @@ def load_via_spark_dbx(value, key, exist_val, istest):
     sc2 = SparkContext.getOrCreate()
     spark_fbi = SparkSession(sc2)
     # spark_fbi.conf.set('spark.default.parallelism', '32')
+
     catalog = 'finance_accounting'
-    database = 'finance_test' if istest else 'finance_prod'
+    # in some case, istest is pass as string, changing in load_method_by_env() as well
+    database = 'finance_test' if istest==True else 'finance_prod'
     full_table_name = f'{catalog}.{database}.{key}'
     try:
         df = spark_fbi.table(full_table_name)
