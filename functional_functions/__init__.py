@@ -670,8 +670,12 @@ def query_method_by_env_dbx(query, use_service_account = False):
     # to improve performance, will need to install additional driver which is not available on dbx;
     # therefore, using spark api (there is downside, causing warning for datatime schema!!)
     if os.environ.get('environment') == 'databricks':
+        print('query via spark api, converting to pandas dataframe')
         return query_via_spark_dbx(query)
     else:
+        if use_service_account:
+            print('query via sql endpoint, using service account creds')
+        else: print('query via sql endpoint, using personal account')
         return query_databricks(query, use_service_account)
     
 def load_method_by_env(value, key, exist_val, istest):
