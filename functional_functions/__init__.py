@@ -2,11 +2,10 @@ from json import load
 import snowflake.connector
 import pickle
 import os, sys
-from databricks import sql
+# from databricks import sql
 # from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 # import pandas.io.sql as pdsql
-import logging
 from datetime import datetime as dt 
 import os.path
 from os import path
@@ -19,6 +18,9 @@ import getpass
 # import json
 import redshift_connector
 from functional_functions.ff_classes import FBI_S3, DBX_sql, AWS_Secrets
+
+import logging
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
 
 # import jaydebeapi as jay
 
@@ -99,33 +101,9 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     print('loading tbl ' + tbl_name + 'in snowflake')
 
-    username, pkb = AWS_Secrets().get_snowflake_secrets()
-
     if creds is None:
-        creds = {
-            'usr' : username,
-            'pkb' : pkb,
-            'role' : os.environ.get('SNOWLAKE_ROLE'),
-            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
-            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
-            'schema' : os.environ.get('SNOWFLAKE_SCHEMA'),
-        }
-
-        #Use settings if ENV vars are not set up
-        if all(value is None for value in [creds['role'], creds['warehouse_name'],creds['db_name'], creds['schema']]):
-            creds = {
-                'usr' : username,
-                'pkb' : pkb,
-                'role' : settings.SNOWFLAKE_FPA['role'],
-                'warehouse_name' : settings.SNOWFLAKE_FPA['warehouse_name'],
-                'db_name' : settings.SNOWFLAKE_FPA['db_name'],
-                'schema' : settings.SNOWFLAKE_FPA['schema']
-            }
-    
-    try: 
-        schema = creds['schema']
-    except KeyError:
-        schema = 'FPA_SANDBOX'
+        creds = AWS_Secrets().get_snowflake_secrets()
+    schema = creds['schema']
 
     #Usually this only happens when reading in from a CSV, but better to be safe than sorry
     load_df.replace(abs(np.inf),0,inplace=True)
@@ -165,7 +143,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     # conn.close()
 
-def get_logger(name, dirpath=None):
+def get_logger(name, dirpath=None, level=logging.INFO):
     '''
         updated version for get_logger()
         args:
@@ -183,7 +161,7 @@ def get_logger(name, dirpath=None):
             logger = logging.getLogger(name)
             # formatter = logging.Formatter("%(asctime)s %(levelname)s \t[%(filename)s:%(lineno)s - %(funcName)s()] %(message)s")	
             formatter = logging.Formatter('%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
-            logger.setLevel(logging.INFO)
+            logger.setLevel(level)
 
             #add normal steam handler to display logs on screen
             io_log_handler = logging.StreamHandler()
@@ -210,7 +188,7 @@ def get_logger(name, dirpath=None):
                     format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', 
                     filemode='a', 
                     datefmt='%H:%M:%S',
-                    level=logging.INFO)
+                    level=level)
             except Exception as e:
                 print('could not find or create logs dir, please create manually or double check permission')
                 print(str(e))
@@ -227,7 +205,7 @@ def get_logger(name, dirpath=None):
                     format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s',
                     filemode='a',
                     datefmt='%H:%M:%S',
-                    level=logging.INFO)
+                    level=level)
             except Exception as e:
                 print('could not find or create logs dir, please create manually or double check permission')
                 print(str(e))
@@ -659,12 +637,12 @@ def list_dbx_tables(catalog_name=None):
     pdf = dbx_sql.list_all_tables(catalog_name=catalog_name)
     return pdf
 
-# TODO: consider using Spark API to load data if running on databricks
-def query_method_by_env_dbx(query, use_service_account = False):
+def query_method_by_env_dbx(query, use_service_account = True):
     """
         use in ETL pipeline
         Load data through Spark API if on databricks;
-        use sql endpoint if in local environment
+        use sql endpoint if in local environment;
+        default using service account to query to simplfying settings.py file saving on local
     """
     # query_databricks() using sql endpoint to load data, the performance is bad compare with query_snowflake (as of 4/22/2022)
     # to improve performance, will need to install additional driver which is not available on dbx;
