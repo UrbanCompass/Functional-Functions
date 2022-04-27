@@ -650,11 +650,11 @@ def query_method_by_env_dbx(query, use_service_account = True):
 
     # print is for test purpose, will remove when pr or next version (for user better understanding the logic)
     if os.environ.get('environment') == 'databricks':
-        print('query via spark api, converting to pandas dataframe')
+        logging.debug('query via spark api, converting to pandas dataframe')
         return query_via_spark_dbx(query)
     else:
-        if use_service_account == True: print('query via sql endpoint, using service account creds')
-        else: print('query via sql endpoint, using personal account')
+        if use_service_account == True: logging.debug('query via sql endpoint, using service account creds')
+        else: logging.debug('query via sql endpoint, using personal account')
         return query_databricks(query, use_service_account)
     
 def load_method_by_env(value, key, exist_val, istest):
@@ -709,9 +709,9 @@ def load_via_spark_dbx(value, key, exist_val, istest):
                 .option('path', f's3://di-databricks-production-finance/{database}/{key}') \
                 .saveAsTable(full_table_name)
             spark_fbi.sql(f'GRANT ALL PRIVILEGES ON TABLE {catalog}.{database}.{key} TO `FBI Team`')
-        print(f'{full_table_name} has been updated in DATABRICKS')
+        logging.info(f'{full_table_name} has been updated in DATABRICKS')
     except Exception as e:
-        print(str(e))
+        logging.exception('Exception Occurred')
 
 def query_via_spark_dbx(query):
     """
