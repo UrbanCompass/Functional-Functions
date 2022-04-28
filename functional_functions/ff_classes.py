@@ -199,14 +199,14 @@ class AWS_Secrets:
         pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
         role = secrets['snowflake_role']
         warehouse_name = secrets['snowflake_wh']
-        db_name = secrets['snowflake_db_name']
+        db = secrets['snowflake_db_name']
         schema = secrets['snowflake_schema_name']
         creds = {
             'usr' : username,
             'pkb' : pkey,
             'role' : role,
             'warehouse_name' : warehouse_name,
-            'db_name' : db_name,
+            'db' : db,
             'schema' : schema
         }
         return creds

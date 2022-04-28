@@ -215,7 +215,7 @@ def get_logger(name, dirpath=None, level=logging.INFO):
         # logger.addHandler(io_log_handler)
         return logger
 
-def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schema=None):
+def get_snowflake_connection(usr, pkb, role, warehouse_name, db=None, schema=None):
     '''
     The purpose of this function is to get a snowflake connection using credentials, usually stored in
     a settings file or env vars.
@@ -236,31 +236,18 @@ def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schem
 
     '''
 
-    if db_name is None:
-        db_name = 'PC_STITCH_DB'
-    
-    if schema is None:
-        conn = snowflake.connector.connect(
-                            user=usr,
-                            account="gl11689.us-east-1",
-                            private_key=pkb,
-                            role = role,
-                            warehouse=warehouse_name,
-                            database=db_name,
-                            schema = 'NETSUITE_REPORTING'
-                            )
-    else:
-            conn = snowflake.connector.connect(
-                            user=usr,
-                            account="gl11689.us-east-1",
-                            private_key=pkb,
-                            role = role,
-                            warehouse=warehouse_name,
-                            database=db_name,
-                            schema = schema
-                            )
-    
+    db_name = db if db else 'PC_STITCH_DB'
+    schema_name = schema if schema else 'NETSUITE_REPORTING'
 
+    conn = snowflake.connector.connect(
+                    user=usr,
+                    account="gl11689.us-east-1",
+                    private_key=pkb,
+                    role = role,
+                    warehouse=warehouse_name,
+                    database=db_name,
+                    schema=schema_name
+                    )
     #conn.cursor().execute("USE role {}".format(role))
     
     return conn
