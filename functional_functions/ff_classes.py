@@ -218,6 +218,11 @@ class AWS_Secrets:
         dbx_token = secrets['dbx_token']
         return dbx_host, dbx_path, dbx_token
 
+    def get_gsheets_secrets(self):
+        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_gsheets_creds')
+        gsheets_secrets = secrets['FBI_GSHEETS_CREDS']
+        return gsheets_secrets
+
     # TODO: adding
     def get_s3_secrets(self):
         return "aws_s3_key_id", "aws_s3_secrets"

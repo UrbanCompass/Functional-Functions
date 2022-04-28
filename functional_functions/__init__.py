@@ -17,6 +17,7 @@ import hashlib
 import getpass
 # import json
 import redshift_connector
+from functional_functions import pygsheets
 from functional_functions.ff_classes import FBI_S3, DBX_sql, AWS_Secrets
 
 import logging
