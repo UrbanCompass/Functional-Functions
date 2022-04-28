@@ -101,8 +101,8 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     print('loading tbl ' + tbl_name + 'in snowflake')
 
-    if creds is None:
-        creds = AWS_Secrets().get_snowflake_secrets()
+    creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
+
     schema = creds['schema']
 
     #Usually this only happens when reading in from a CSV, but better to be safe than sorry
@@ -129,7 +129,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
 
     load_df.columns = map(fix_column_name, load_df.columns)
 
-    conn = get_snowflake_connection(**creds) #, engine
+    conn = get_snowflake_connection(**creds_dict) #, engine
     engine = create_engine(f"snowflake://gl11689.us-east-1.snowflakecomputing.com", creator=lambda: conn)
 
     if if_exists == 'replace':
@@ -265,7 +265,7 @@ def get_snowflake_connection(usr, pkb, role, warehouse_name, db_name=None, schem
     
     return conn
 
-def query_snowflake(query, creds_dict=None):
+def query_snowflake(query, creds=None):
     '''
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
     structure. Will open a connection, query snowflake, and close connection and return dataframe
@@ -291,29 +291,8 @@ def query_snowflake(query, creds_dict=None):
 
     '''
     
-    username, pkb = AWS_Secrets().get_snowflake_secrets()
+    creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
 
-    if creds_dict is None:
-        creds_dict = {
-            'usr' : username,
-            'pkb' : pkb,
-            'role' : os.environ.get('SNOWLAKE_ROLE'),
-            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
-            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
-            'schema' : os.environ.get('SNOWFLAKE_SCHEMA'),
-        }
-
-        #Use settings if ENV vars are not set up
-        if all(value is None for value in [creds_dict['role'], creds_dict['warehouse_name'],creds_dict['db_name'], creds_dict['schema']]):
-            creds_dict = {
-                'usr' : username,
-                'pkb' : pkb,
-                'role' : settings.SNOWFLAKE_FPA['role'],
-                'warehouse_name' : settings.SNOWFLAKE_FPA['warehouse_name'],
-                'db_name' : settings.SNOWFLAKE_FPA['db_name'],
-                'schema' : settings.SNOWFLAKE_FPA['schema']
-            }
-    # get_snowflake_connection(warehouse_name, db_name=None, schema=None, usr, pkb)
     conn = get_snowflake_connection(**creds_dict)
 
     resp =  conn.cursor().execute(query).fetch_pandas_all()
@@ -532,28 +511,9 @@ def batch_start(test_mode, script_name, creds=None):
     dt_now = pytz.timezone("US/Eastern").localize(dt.now())
     hash_id = hashlib.md5(str(dt.now()).encode('utf-8')).hexdigest()
 
-    username, pkb = AWS_Secrets().get_snowflake_secrets()
-
-    usn_pkb = {
-                'usr': username,
-                'pkb': pkb
-            }
-
-    if creds is None:
-        creds = {
-            'role' : os.environ.get('SNOWLAKE_ROLE'),
-            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
-            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
-            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
-        }
-
-        if all(value is None for value in creds.values()):
-            creds=settings.SNOWFLAKE_FPA
-    
-    usn_pkb.update(creds)
-    creds = usn_pkb
+    creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
             
-    conn = get_snowflake_connection(**creds)
+    conn = get_snowflake_connection(**creds_dict)
 
     q = """INSERT INTO fpa_sandbox.batch_table (batch_status,start_time,batch_hash,test_mode,script_name, user_running) 
                 VALUES ('Running...','{}','{}','{}','{}','{}');""".format(dt_now,hash_id,test_mode,script_name,user_running)
@@ -575,28 +535,9 @@ def batch_update(status, hash_id, creds=None):
     hash_id - hash_id that was returned from batch_start()
     '''
 
-    username, pkb = AWS_Secrets().get_snowflake_secrets()
+    creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
 
-    usn_pkb = {
-                'usr': username,
-                'pkb': pkb
-            }
-
-    if creds is None:
-        creds = {
-            'role' : os.environ.get('SNOWLAKE_ROLE'),
-            'warehouse_name' : os.environ.get('SNOWFLAKE_WAREHOUSE_NAME'),
-            'db_name' : os.environ.get('SNOWFLAKE_DB_NAME'),
-            'schema' : os.environ.get('SNOWFLAKE_SCHEMA')
-        }
-
-        if all(value is None for value in creds.values()):
-            creds=settings.SNOWFLAKE_FPA
-    
-    usn_pkb.update(creds)
-    creds = usn_pkb
-
-    conn = get_snowflake_connection(**creds)
+    conn = get_snowflake_connection(**creds_dict)
     
     q = "UPDATE fpa_sandbox.batch_table SET batch_status = '{}', end_time = CURRENT_TIMESTAMP() WHERE batch_hash = '{}' ".format(status,hash_id)
 
