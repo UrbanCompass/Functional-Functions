@@ -669,6 +669,7 @@ def get_spark_schema(pdf):
 
     struct_list = []
     datetime64_cols = ['FinalClosingDate']
+
     for col, typ in zip(list(pdf.columns), list(pdf.infer_objects().dtypes)):
         
         if typ == 'object': spark_typ = StringType()
@@ -677,7 +678,7 @@ def get_spark_schema(pdf):
         else: spark_typ = DoubleType()
         
 
-        if (col.lower().endswith('date') or col.lower().endswith('period')) and (~col.lower().isin(datetime64_cols)): 
+        if (col.lower().endswith('date') or col.lower().endswith('period')) and (~col.lower().isin([x.lower() for x in datetime64_cols])): 
             spark_typ = DateType()
         if col == 'TRANSACTION_ID': spark_typ = IntegerType()
         if col == 'CLEAN_ADDRESS_PARSE': spark_typ = BooleanType()
