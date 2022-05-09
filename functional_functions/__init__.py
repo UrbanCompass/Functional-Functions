@@ -99,10 +99,9 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
         tbl_name = tbl_name.upper()
 
 
-    print('loading tbl ' + tbl_name + 'in snowflake')
+    print('loading tbl ' + tbl_name + ' in snowflake')
 
     creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
-
     schema = creds['schema']
 
     #Usually this only happens when reading in from a CSV, but better to be safe than sorry
@@ -623,7 +622,8 @@ def load_via_spark_dbx(value, key, exist_val, istest):
     except AnalysisException as e:
         # print(str(e))
         databricks_table_exist_flag = False
-    pdf = value.astype(object).where(pd.notnull(value), None)
+    # converting np.nan (which not accepted by spark) values to None
+    pdf = pdf.where(pd.notnull(pdf), None)
     spark_schema = get_spark_schema(pdf)
     try:
         df = spark_fbi.createDataFrame(pdf, spark_schema)
