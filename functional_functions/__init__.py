@@ -102,7 +102,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
     print('loading tbl ' + tbl_name + ' in snowflake')
 
     creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
-    schema = creds['schema']
+    schema = creds_dict['schema']
 
     #Usually this only happens when reading in from a CSV, but better to be safe than sorry
     load_df.replace(abs(np.inf),0,inplace=True)
