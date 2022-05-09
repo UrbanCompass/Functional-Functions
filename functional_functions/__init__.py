@@ -623,10 +623,10 @@ def load_via_spark_dbx(value, key, exist_val, istest):
         # print(str(e))
         databricks_table_exist_flag = False
     # converting np.nan (which not accepted by spark) values to None
-    pdf = pdf.where(pd.notnull(pdf), None)
-    spark_schema = get_spark_schema(pdf)
+    value = value.where(pd.notnull(value), None)
+    spark_schema = get_spark_schema(value)
     try:
-        df = spark_fbi.createDataFrame(pdf, spark_schema)
+        df = spark_fbi.createDataFrame(value, spark_schema)
         # if key == 'transaction_line_data': df = df.repartition(32)
         if databricks_table_exist_flag:
             if exist_val == 'replace': write_mode = 'overwrite'
