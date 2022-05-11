@@ -350,7 +350,7 @@ def query_redshift(query, dsn_dict=None):
     return resp
 
 
-def query_databricks(query, use_service_account = False):
+def query_databricks(query, full_table = False, use_service_account = False):
     """
     This function is intended to enable users to connect and query from Databricks tables!
 
@@ -359,19 +359,9 @@ def query_databricks(query, use_service_account = False):
     'http_path',
     'access_token'
 
-    each of these can be gathered from Databricks by going to:
-    (For server_hostname and http_path)
-    Databricks --> SQL --> SQL Endpoints --> Click on Endpoint --> Connection Details
-
-    (For access_token)
-    Databricks --> SQL --> SQL Endpoints --> Click on Endpoint --> Connection Details --> Create a personal access token
-
     parameters
     --
     query : str, the SQL query being used
-    databricks_dict : dict, the dictionary with connection creds, see settings.py.sample REDSHIFT_SVC_ACCT for details or see creds.env.sample for ENV var names
-
-    if no dict is provided, will default to calling settings.py creds
 
     """
     if use_service_account == True or os.environ.get('environment') == 'databricks':
@@ -379,6 +369,9 @@ def query_databricks(query, use_service_account = False):
         dbx_sql = DBX_sql(server_hostname=dbx_host, http_path=dbx_path, access_token=dbx_token)
     else:
         dbx_sql = DBX_sql()
+    if full_table == False and os.environ.get('environment') != 'databricks':
+        if 'limit' not in query.lower():
+            query = query + " limit 10000"
     return dbx_sql.query_table(query)
 
 def save_pickle(df, file_name, folder_name=None, file_path_option=None):
@@ -637,7 +630,7 @@ def load_via_spark_dbx(value, key, exist_val, istest):
                 .option('path', f's3://di-databricks-production-finance/{database}/{key}') \
                 .saveAsTable(full_table_name)
             spark_fbi.sql(f'GRANT ALL PRIVILEGES ON TABLE {catalog}.{database}.{key} TO `FBI Team`')
-        logging.info(f'{full_table_name} has been updated in DATABRICKS')
+        print(f'{full_table_name} has been updated in DATABRICKS')
     except Exception as e:
         logging.exception('Exception Occurred')
 
