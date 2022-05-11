@@ -51,7 +51,8 @@ def help():
     batch_update()
     grant_all_permissions_dbx()
     load_via_spark_dbx()
-    (only for ETL) query_method_by_env_dbx(query, use_service_account = False)
+    ( ONLY for DBX ) query_method_by_env_dbx()
+    ( more func available in ff_classes )
     '''
     
     print('''
@@ -73,7 +74,8 @@ def help():
     batch_update()
     grant_all_permissions_dbx()
     load_via_spark_dbx()
-    (only for ETL) query_method_by_env_dbx(query, use_service_account = False)
+    ( ONLY for DBX ) query_method_by_env_dbx()
+    ( more func available in ff_classes )
     ''')
 
 def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
@@ -362,7 +364,8 @@ def query_databricks(query, full_table = False, use_service_account = False):
     parameters
     --
     query : str, the SQL query being used
-
+    full_table : bool; default False, only query top 10k rows on local to save query time; set to True if need full table
+    use_service_account: bool; default False, use personal account on local; automatically use service account on dbx
     """
     if use_service_account == True or os.environ.get('environment') == 'databricks':
         dbx_host, dbx_path, dbx_token = AWS_Secrets().get_dbx_secrets()
@@ -527,10 +530,12 @@ def grant_table_permissions_dbx(tbl_name=None):
     """
         grant all permissions for FBI Team on all tables in finance_accounting catalog
         if tbl_name given, only grant permission to that table
-        NOTE: all table being created through dbx_sql.create_or_replace_table() will grant permission to FBI Team automatically
+        NOTE: all table being created through dbx_sql.create_or_replace_table() / load_via_sql_dbx() will grant permission to FBI Team automatically
     """
     dbx_sql = DBX_sql()
-    dbx_sql.grant_permissions_fbi()
+    dbx_sql.grant_permissions_fbi(tbl_name)
+
+# TODO: drop table; might be easier to do it on UI, need to think about whether to delete the data file on s3 as well
 
 def load_via_sql_dbx(load_df, tbl_name, local_path='./data', test_mode = True, s3_file = None):
     """
@@ -547,7 +552,7 @@ def load_via_sql_dbx(load_df, tbl_name, local_path='./data', test_mode = True, s
         test_mode : default True, the table will be created in finance_test database; recommand leave as default
         s3_file: the file name in s3 bucket, default None and will be the same as tbl_name; recommand leave as default
 
-        NOTE: local_path will be the same location where you entry point is
+        NOTE: local_path will be the same location where your entry point is
     """
     dbx_sql = DBX_sql()
     dbx_sql.create_or_replace_table(load_df=load_df, tbl_name=tbl_name, local_path='./data', test_mode = True, s3_file = None)
@@ -634,15 +639,14 @@ def load_via_spark_dbx(value, key, exist_val, istest):
                 .option('path', f's3://di-databricks-production-finance/{database}/{key}') \
                 .saveAsTable(full_table_name)
             spark_fbi.sql(f'GRANT ALL PRIVILEGES ON TABLE {catalog}.{database}.{key} TO `FBI Team`')
-        print(f'{full_table_name} has been updated in DATABRICKS')
+        logging.info(f'{full_table_name} has been updated in DATABRICKS')
     except Exception as e:
         logging.exception('Exception Occurred')
 
 def query_via_spark_dbx(query):
     """
         query through spark API, only for Spark env
-        only use on databricks, loading table via spark api
-        call by query_method_by_env
+        ONLY for DBX, loading table via spark api
     """
     from pyspark.context import SparkContext
     from pyspark.sql.session import SparkSession
@@ -659,7 +663,7 @@ def query_via_spark_dbx(query):
 def get_spark_schema(pdf):
     """
         generate spark schema based on pandas dtypes
-        currently still require some manually fixing on certain column
+        currently still require some manually fixing on certain column; especially for Boolean table
     """
 
     from pyspark.sql.types import StringType, IntegerType, DoubleType, DateType, TimestampType, BooleanType, StructField, StructType
