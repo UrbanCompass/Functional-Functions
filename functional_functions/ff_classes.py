@@ -149,21 +149,33 @@ class DBX_sql:
         # if str(result) != '[]': print(result)
         return result
 
-    def grant_permissions_fbi(self, tbl_name=None):
+    def grant_permissions_fbi(self, single_table_name=None):
         """
             default, grant permissions to FBI Team for every tables in catalog;
-            TODO: optional to specify names 
+
+            optional to specify names: grant permission for one single table 
+            (not likely being used, the permission will be granted )
         """
-        all_tables = self.list_all_tables()
-        for index, row in all_tables.iterrows():
-            db_name, tbl_name = row['database'], row['table_name']
-            full_name = f'{self.catalog_name}.{db_name}.{tbl_name}'
-            logging.debug(full_name)
+        if single_table_name == None:
+            all_tables = self.list_all_tables()
+            for index, row in all_tables.iterrows():
+                db_name, tbl_name = row['database'], row['table_name']
+                full_name = f'{self.catalog_name}.{db_name}.{tbl_name}'
+                logging.debug(full_name)
+                if tbl_name.lower().startswith('vw'):
+                    grant_permission_query = f'GRANT SELECT ON VIEW {full_name} TO `FBI Team`'
+                else:
+                    grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {full_name} TO `FBI Team`'
+                
+                try:
+                    self.execute(grant_permission_query)
+                except Exception as e:
+                    logging.exception(f'could not grant permission for {full_name}')
+        else:
             if tbl_name.lower().startswith('vw'):
-                grant_permission_query = f'GRANT SELECT ON VIEW {full_name} TO `FBI Team`'
+                    grant_permission_query = f'GRANT SELECT ON VIEW {full_name} TO `FBI Team`'
             else:
                 grant_permission_query = f'GRANT ALL PRIVILEGES ON TABLE {full_name} TO `FBI Team`'
-            
             try:
                 self.execute(grant_permission_query)
             except Exception as e:

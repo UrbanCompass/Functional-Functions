@@ -523,9 +523,11 @@ def batch_update(status, hash_id, creds=None):
     conn.cursor().execute(q)
     # conn.close()
 
-def grant_all_permissions_dbx():
+def grant_table_permissions_dbx(tbl_name=None):
     """
         grant all permissions for FBI Team on all tables in finance_accounting catalog
+        if tbl_name given, only grant permission to that table
+        NOTE: all table being created through dbx_sql.create_or_replace_table() will grant permission to FBI Team automatically
     """
     dbx_sql = DBX_sql()
     dbx_sql.grant_permissions_fbi()
@@ -544,6 +546,8 @@ def load_via_sql_dbx(load_df, tbl_name, local_path='./data', test_mode = True, s
         local_path : the location you want to save the parquet file
         test_mode : default True, the table will be created in finance_test database; recommand leave as default
         s3_file: the file name in s3 bucket, default None and will be the same as tbl_name; recommand leave as default
+
+        NOTE: local_path will be the same location where you entry point is
     """
     dbx_sql = DBX_sql()
     dbx_sql.create_or_replace_table(load_df=load_df, tbl_name=tbl_name, local_path='./data', test_mode = True, s3_file = None)
