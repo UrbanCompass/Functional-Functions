@@ -663,7 +663,7 @@ def query_via_spark_dbx(query):
 def get_spark_schema(pdf):
     """
         generate spark schema based on pandas dtypes
-        currently still require some manually fixing on certain column; especially for Boolean table
+        currently still require some manually fixing on certain column; especially for Boolean type
     """
 
     from pyspark.sql.types import StringType, IntegerType, DoubleType, DateType, TimestampType, BooleanType, StructField, StructType

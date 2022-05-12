@@ -18,10 +18,10 @@ class FBI_S3:
     def __init__(self, key_id=os.environ.get('S3_CUSTOM_UPLOAD_KEY_ID'), access_key=os.environ.get('S3_CUSTOM_UPLOAD_ACCESS_KEY')):
         if key_id == None:
             try: key_id=settings.AWS_SECRETS_MANAGER_CREDS['S3_CUSTOM_UPLOAD_KEY_ID']
-            except: logging.error('aws s3 key management key_id NOT found, please double check')
+            except: logging.exception('aws s3 key management key_id NOT found, please double check')
         if access_key == None:
             try: access_key=settings.AWS_SECRETS_MANAGER_CREDS['S3_CUSTOM_UPLOAD_ACCESS_KEY']
-            except: logging.error('aws s3 key management access_key NOT found, please double check')
+            except: logging.exception('aws s3 key management access_key NOT found, please double check')
         self.key_id = key_id
         self.access_key = access_key
         self.bucket = 'di-production-custom-uploads'
@@ -76,13 +76,13 @@ class DBX_sql:
     def __init__(self, server_hostname = os.environ.get('DB_HOST'), http_path=os.environ.get('DB_PATH'), access_token=os.environ.get('DB_TOKEN')):
         if server_hostname == None:
             try: server_hostname=settings.DATABRICKS_CREDS['jdbcHostName']
-            except: logging.error('Databricks server_hostname NOT found, please double check')
+            except: logging.exception('Databricks server_hostname NOT found, please double check')
         if http_path == None:
             try: http_path=settings.DATABRICKS_CREDS['httpPath']
-            except: logging.error('Databricks http_path NOT found, please double check')
+            except: logging.exception('Databricks http_path NOT found, please double check')
         if access_token == None:
             try: access_token=settings.DATABRICKS_CREDS['accessToken']
-            except: logging.error('Databricks access_token NOT found, please double check')
+            except: logging.exception('Databricks access_token NOT found, please double check')
         
         self.catalog_name = 'finance_accounting'
         try:
