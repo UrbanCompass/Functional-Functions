@@ -78,8 +78,9 @@ def help():
     ( more func available in ff_classes )
     ''')
 
-def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, test_mode=None):
+def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', test_mode=True, creds=None):
     '''
+    (NOTE: internal function, only call by load_method_by_env() )
     This is the function that load pd df direct via SQL instead of a CSV fashion.
     Currently designed to be used with sandbox or current designed database via settings file.
     Pass in other creds if different or it will default to use of ENV vars. See creds.env.sample for env var names.
@@ -96,10 +97,10 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', creds=None, t
     test_mode : default None, anything else will create a table called tbl_name + '_test'
     '''
 
-    if test_mode is not None:
+    if test_mode == True or test_mode is None:
         tbl_name += '_test'
-        tbl_name = tbl_name.upper()
-
+    
+    tbl_name = tbl_name.upper()
 
     print('loading tbl ' + tbl_name + ' in snowflake')
 
