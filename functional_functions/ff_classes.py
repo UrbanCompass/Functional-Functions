@@ -223,6 +223,9 @@ class AWS_Secrets:
         }
         return creds
 
+    def get_secrets_test():
+        pass
+
     def get_dbx_secrets(self):
         secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_dbx_vars')
         dbx_host = secrets['dbx_host']

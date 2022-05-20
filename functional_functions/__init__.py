@@ -688,3 +688,6 @@ def get_spark_schema(pdf):
         
     spark_schema = StructType(struct_list)
     return spark_schema
+
+def test():
+    pass
