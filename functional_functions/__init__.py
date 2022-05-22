@@ -593,13 +593,18 @@ def load_method_by_env(value, key, exist_val, istest):
         dbx load using Spark API
         snowflake load using python sql connecter
         TODO: will consider loading into only one environment, when snowflake is retired
+        NOTE: snowflake testflag logic is different from databricks testflag, since snowflake will be retired later
+            not spending extra time to fix the difference
     """
     if istest == False or istest == "False" or istest == None:
-        testflag = False
-    else: testflag = True
+        dbx_testflag = False
+        sf_testflag = True
+    else: 
+        dbx_testflag = True
+        sf_testflag = False
     if os.environ.get('environment') == 'databricks':
-        load_via_spark_dbx(value, key, exist_val, istest=testflag)
-    load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=testflag)
+        load_via_spark_dbx(value, key, exist_val, istest=dbx_testflag)
+    load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=sf_testflag)
     # load_via_sql_dbx(load_df=value, tbl_name=key, test_mode=istest)
 
 def load_via_spark_dbx(value, key, exist_val, istest):
