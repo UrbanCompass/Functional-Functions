@@ -165,10 +165,6 @@ def get_logger(name, dirpath=None, level=logging.INFO):
             formatter = logging.Formatter('%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
             logger.setLevel(level)
 
-            #add normal steam handler to display logs on screen
-            io_log_handler = logging.StreamHandler()
-            logger.addHandler(io_log_handler)
-
             for handler in logger.handlers:
                 handler.setFormatter(formatter)
         except Exception as e:
