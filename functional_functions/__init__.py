@@ -102,7 +102,7 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', test_mode=Tru
     
     tbl_name = tbl_name.upper()
 
-    print('loading tbl ' + tbl_name + ' in snowflake')
+    # print('loading tbl ' + tbl_name + ' in snowflake')
 
     creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
     schema = creds_dict['schema']
@@ -135,13 +135,13 @@ def load_via_sql_snowflake(load_df, tbl_name, if_exists='replace', test_mode=Tru
     engine = create_engine(f"snowflake://gl11689.us-east-1.snowflakecomputing.com", creator=lambda: conn)
 
     if if_exists == 'replace':
-        print('dropping existing table')
+        logging.info(f'start dropping existing table: {tbl_name}')
         engine.connect().execute('drop table if exists ' + schema + '.' + tbl_name)
 
     # print('loading...')
     # load_df.to_sql(tbl_name, con=conn, index=False, if_exists='append', method=pd_writer)
     load_df.to_sql(tbl_name, con=engine.connect(), if_exists='append', index=False, method=pd_writer)
-    print(f'{tbl_name} has been updated in SNOWFLAKES')
+    logging.info(f'{tbl_name} has been updated in SNOWFLAKES')
 
     # conn.close()
 
