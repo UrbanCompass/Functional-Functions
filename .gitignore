@@ -21,3 +21,4 @@ tld-referral/tld_for_databricks/logs/*
 *.pyc
 */*.pyc
 settings.py
+upload_dist_local.sh
