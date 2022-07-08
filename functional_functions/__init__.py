@@ -639,6 +639,7 @@ def load_via_spark_dbx(value, key, exist_val, istest):
         logging.info(f'{full_table_name} has been updated in DATABRICKS')
     except Exception as e:
         logging.exception('Exception Occurred')
+        raise Exception ('Could not write table to databricks')
 
 def query_via_spark_dbx(query):
     """
