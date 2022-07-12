@@ -233,14 +233,14 @@ class AWS_Secrets:
         return creds
 
     def get_dbx_secrets(self):
-        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_dbx_vars')
+        secrets = self.aws_secrets_manager_getvalues(secret_name='cred.fbi.dbx')
         dbx_host = secrets['dbx_host']
         dbx_path = secrets['dbx_path']
         dbx_token = secrets['dbx_token']
         return dbx_host, dbx_path, dbx_token
 
     def get_gsheets_secrets(self):
-        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_gsheets_creds')
+        secrets = self.aws_secrets_manager_getvalues(secret_name='cred.fbi.gsheets_creds')
         gsheets_secrets = secrets['FBI_GSHEETS_CREDS']
         return gsheets_secrets
 
