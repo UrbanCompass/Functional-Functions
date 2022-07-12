@@ -215,7 +215,7 @@ class AWS_Secrets:
     def get_snowflake_secrets(self):
         # username = 'username'
         # pkey = 'pkey'
-        secrets = self.read_aws_secret(secret_name='cred.fbi.snowflake')
+        secrets = self.read_aws_secret('cred.fbi.snowflake')
         username = self.decode_snowflake_username(username_encoded=secrets['snowflake_usn'])
         pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
         role = secrets['snowflake_role']
@@ -233,14 +233,14 @@ class AWS_Secrets:
         return creds
 
     def get_dbx_secrets(self):
-        secrets = self.aws_secrets_manager_getvalues(secret_name='cred.fbi.dbx')
+        secrets = self.read_aws_secret('cred.fbi.dbx')
         dbx_host = secrets['dbx_host']
         dbx_path = secrets['dbx_path']
         dbx_token = secrets['dbx_token']
         return dbx_host, dbx_path, dbx_token
 
     def get_gsheets_secrets(self):
-        secrets = self.aws_secrets_manager_getvalues(secret_name='cred.fbi.gsheets_creds')
+        secrets = self.read_aws_secret('cred.fbi.gsheets_creds')
         gsheets_secrets = secrets['FBI_GSHEETS_CREDS']
         return gsheets_secrets
 
