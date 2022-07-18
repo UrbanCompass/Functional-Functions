@@ -203,7 +203,7 @@ class AWS_Secrets:
         #         aws_secret_access_key=access_key
         #     )
         
-    def read_aws_secret(secret_name, region_name="us-east-1"):
+    def read_aws_secret(self, secret_name, region_name="us-east-1"):
         """
         Reads secrets from AWS secret manager
         """
