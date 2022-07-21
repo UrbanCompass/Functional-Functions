@@ -2,7 +2,7 @@ name: upload latest functional_functions dist
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, xx/add_github_act ]
   pull_request:
     branches: [ main ]
 
@@ -22,4 +22,4 @@ jobs:
           ADB_TOKEN: ${{ secrets.ADB_TOKEN }}
           ADB_WORKSPACE_URL : "compass-di-infra-production.cloud.databricks.com"
           TARGET_REPO_FOLDER: "functional-functions"
-          SOURCE_GIT_BRANCH : "main"
+          SOURCE_GIT_BRANCH : "xx/add_github_act"
