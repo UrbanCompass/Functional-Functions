@@ -181,8 +181,6 @@ class DBX_sql:
             except Exception as e:
                 logging.exception(f'could not grant permission for {full_name}')
 
-    
-
 class AWS_Secrets:
     """
         AWS Secrets API wrapping
@@ -190,23 +188,35 @@ class AWS_Secrets:
     def __init__(self, key_id=os.environ.get('AWS_ACCESS_KEY_ID'), access_key=os.environ.get('AWS_SECRET_ACCESS_KEY')):
         if key_id == None:
             try: key_id=settings.AWS_SECRETS_MANAGER_CREDS['AWS_ACCESS_KEY_ID']
-            except: logging.exception('aws secrets management key_id NOT found, please double check')
+            except Exception as e: pass
+            # except: logging.exception('aws secrets management key_id NOT found, please double check')
         if access_key == None:
             try: access_key=settings.AWS_SECRETS_MANAGER_CREDS['AWS_SECRET_ACCESS_KEY']
-            except: logging.exception('aws secrets key management access_key NOT found, please double check')
+            except Exception as e: pass
+            # except: logging.exception('aws secrets key management access_key NOT found, please double check')
+        all_secrets = None
+        # self.secrets_client = boto3.session.Session() \
+        #     .client( 
+        #         service_name='secretsmanager',
+        #         region_name='us-east-1',
+        #         aws_access_key_id=key_id,
+        #         aws_secret_access_key=access_key
+        #     )
         
-        self.secrets_client = boto3.session.Session() \
-            .client( 
-                service_name='secretsmanager',
-                region_name='us-east-1',
-                aws_access_key_id=key_id,
-                aws_secret_access_key=access_key
-            )
+    def read_aws_secret(self, secret_name, region_name="us-east-1"):
+        """
+        Reads secrets from AWS secret manager
+        """
+        session = boto3.session.Session()
+        client = session.client(service_name="secretsmanager", region_name=region_name)
+        secret_value = client.get_secret_value(SecretId=secret_name)
+        secret = json.loads(secret_value["SecretString"])
+        return secret
 
     def get_snowflake_secrets(self):
         # username = 'username'
         # pkey = 'pkey'
-        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_snowflake_creds')
+        secrets = self.read_aws_secret(secret_name='cred.fbi.snowflake')
         username = self.decode_snowflake_username(username_encoded=secrets['snowflake_usn'])
         pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
         role = secrets['snowflake_role']
@@ -223,18 +233,15 @@ class AWS_Secrets:
         }
         return creds
 
-    def get_secrets_test():
-        pass
-
     def get_dbx_secrets(self):
-        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_dbx_vars')
+        secrets = self.read_aws_secret(secret_name='cred.fbi.dbx')
         dbx_host = secrets['dbx_host']
         dbx_path = secrets['dbx_path']
         dbx_token = secrets['dbx_token']
         return dbx_host, dbx_path, dbx_token
 
     def get_gsheets_secrets(self):
-        secrets = self.aws_secrets_manager_getvalues(secret_name='fbi_gsheets_creds')
+        secrets = self.read_aws_secret(secret_name='cred.fbi.gsheets_creds')
         gsheets_secrets = secrets['FBI_GSHEETS_CREDS']
         return gsheets_secrets
 
@@ -254,7 +261,7 @@ class AWS_Secrets:
             return secrets
         except Exception as e:
             logging.exception("could not find the secrets; check the secret name input and credentials")
-            raise
+            # raise
 
     def _decode_string(self, value):
         return base64.b64decode(value).decode() #.replace("\n", "")
