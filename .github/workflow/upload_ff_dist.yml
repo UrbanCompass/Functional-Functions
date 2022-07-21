@@ -2,9 +2,9 @@ name: upload latest functional_functions dist
 
 on:
   push:
-    branches: [ main, xx/add_github_act ]
-  pull_request:
     branches: [ main ]
+  pull_request:
+    branches: [ main, xx/add_github_act ]
 
 jobs:
   build:
