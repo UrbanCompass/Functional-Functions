@@ -595,11 +595,7 @@ def load_method_by_env(value, key, exist_val, istest):
     else: testflag = True
     if os.environ.get('environment') == 'databricks':
         load_via_spark_dbx(value, key, exist_val, istest=testflag)
-    try:
-        load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=testflag)
-    except Exception as e:
-        logging.exception(f'Exception Occurred, {str(e)}')
-        raise Exception('Could not write the table to snowflake')
+    load_via_sql_snowflake(load_df=value, tbl_name=key, if_exists=exist_val, test_mode=testflag)
     # load_via_sql_dbx(load_df=value, tbl_name=key, test_mode=istest)
 
 def load_via_spark_dbx(value, key, exist_val, istest):
