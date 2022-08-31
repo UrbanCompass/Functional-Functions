@@ -1,4 +1,4 @@
-files=($(ls $GITHUB_WORKSPACE/dist/functional_functions-*.whl | sort -r))
+files=($(ls $GITHUB_WORKSPACE/dist/functional_functions-0.6-py3-none-any.whl | sort -r))
 latest_whl=$(echo ${files[0]})
 
 echo
