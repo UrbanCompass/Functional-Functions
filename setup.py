@@ -20,9 +20,9 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        "snowflake-connector-python >= 2.1.1",
+        "snowflake-connector-python == 2.7.11",
         "snowflake-sqlalchemy >= 1.2.4",
-        "pandas >= 1.1.4",
+        "pandas == 1.4.3",
         "numpy >= 1.19.4",
         "pytz >= 2020.4",
         "pyarrow==8.0.0",
