@@ -87,7 +87,6 @@ def help():
     """
     )
 
-
 def load_via_sql_snowflake(
     load_df, tbl_name, if_exists="replace", test_mode=True, creds=None
 ):
@@ -321,7 +320,6 @@ def query_snowflake(query, creds=None):
 
     return resp
 
-
 def query_snowflake_spark_df(query, creds=None):
     """
     This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
@@ -357,7 +355,6 @@ def query_snowflake_spark_df(query, creds=None):
     # conn.close()
 
     return resp
-
 
 def query_redshift(query, dsn_dict=None):
     """
@@ -819,7 +816,7 @@ def get_spark_schema(pdf):
         struct_list.append(StructField(col, spark_typ))
 
     spark_schema = StructType(struct_list)
-
+    
     return spark_schema
 
 
