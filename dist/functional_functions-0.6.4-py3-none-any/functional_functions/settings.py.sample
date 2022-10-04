@@ -1,0 +1,43 @@
+# SAMPLE FILE, WILL NOT WORK UNLESS YOU TAKE OFF .sample
+# THIS SHOULD BE STORED IN YOUR SITE PACKAGES FOLDER
+
+AWS_SECRETS_MANAGER_CREDS = {
+    "AWS_ACCESS_KEY_ID" : [aws_key_id],
+    "AWS_SECRET_ACCESS_KEY" : [aws_access_key],
+    "S3_CUSTOM_UPLOAD_KEY_ID" : "",
+    "S3_CUSTOM_UPLOAD_ACCESS_KEY" : ""
+}
+
+SNOWFLAKE_FPA = {
+    'role' : 'FPA_CRUD',
+    'warehouse_name' : 'PC_STITCH_WH',
+    'db_name' : 'PC_STITCH_DB',
+    'schema' : 'NETSUITE_REPORTING'
+}
+#READ FROM EVERYWHERE
+
+SNOWFLAKE_FPA = {
+    'usr' :'username',
+    'pwd' : 'pwd',
+    'role' : 'role',
+    'warehouse_name' : 'warehouse'
+}
+#CRUD PERMISSIONS FOR JUST SVC_ACCT_FPA_CRUD
+
+REDSHIFT_SVC_ACCT = {
+    dsn_database : 'db',
+    dsn_hostname : 'hostname',
+    dsn_port : 5439,
+    dsn_uid : 'uid',
+    dsn_pwd : 'pwd'
+}
+
+DATABRICKS_CREDS = {
+    'jdbcHostName': jdbcHostname,
+    'httpPath': httpPath,
+    'accessToken': accessToken
+}
+
+tableau_output_file_path = 'sample file path'
+adhoc_output_file_path = 'sample file path'
+pickle_file_path = 'sample file path'
