@@ -246,7 +246,7 @@ class AWS_Secrets:
         url = secrets['url']
         creds = {
             'sfUser' : username,
-            'pkb' : pkey,
+            'pem_private_key' : pkey,
             'sfRole' : role,
             'sfWarehouse' : warehouse_name,
             'sfDatabase' : db,
