@@ -352,7 +352,7 @@ def query_snowflake_spark_df(query, creds=None):
 
     """
 
-    creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
+    creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets_spark_df()
 
     # conn = get_snowflake_connection(**creds_dict)
 

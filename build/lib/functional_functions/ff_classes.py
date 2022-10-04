@@ -233,6 +233,28 @@ class AWS_Secrets:
         }
         return creds
 
+    def get_snowflake_secrets_spark_df(self):
+        # username = 'username'
+        # pkey = 'pkey'
+        secrets = self.read_aws_secret(secret_name='cred.fbi.snowflake')
+        username = self.decode_snowflake_username(username_encoded=secrets['snowflake_usn'])
+        pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
+        role = secrets['snowflake_role']
+        warehouse_name = secrets['snowflake_wh']
+        db = secrets['snowflake_db_name']
+        schema = secrets['snowflake_schema_name']
+        url = secrets['url']
+        creds = {
+            'usr' : username,
+            'pkb' : pkey,
+            'role' : role,
+            'warehouse_name' : warehouse_name,
+            'db' : db,
+            'schema' : schema,
+            'url' : url
+        }
+        return creds
+
     def get_dbx_secrets(self):
         secrets = self.read_aws_secret(secret_name='cred.fbi.dbx')
         dbx_host = secrets['dbx_host']
