@@ -245,13 +245,13 @@ class AWS_Secrets:
         schema = secrets['snowflake_schema_name']
         url = secrets['url']
         creds = {
-            'usr' : username,
+            'sfUser' : username,
             'pkb' : pkey,
-            'role' : role,
-            'warehouse_name' : warehouse_name,
-            'db' : db,
-            'schema' : schema,
-            'url' : url
+            'sfRole' : role,
+            'sfWarehouse' : warehouse_name,
+            'sfDatabase' : db,
+            'sfschema' : schema,
+            'sfurl' : url
         }
         return creds
 
