@@ -24,6 +24,10 @@ from functional_functions.ff_classes import FBI_S3, DBX_sql, AWS_Secrets
 
 import logging
 
+from pyspark.context import SparkContext
+from pyspark.sql.session import SparkSession
+from pyspark.sql.utils import AnalysisException
+
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
 
 # import jaydebeapi as jay
@@ -316,6 +320,53 @@ def query_snowflake(query, creds=None):
     conn = get_snowflake_connection(**creds_dict)
 
     resp = conn.cursor().execute(query).fetch_pandas_all()
+
+    # conn.close()
+
+    return resp
+
+
+def query_snowflake_spark_df(query, creds=None):
+    """
+    This funky func is meant to query snowflake and cut out the middle man. Ideally it follows a cred or settings file
+    structure. Will open a connection, query snowflake, and close connection and return dataframe
+
+    Will by default use 'SNOWFLAKE' from settings file or ENV vars. See creds.env.sample for ENV var names.
+
+    Params
+    ------
+    query : str, the query str
+    creds_dict : dict, the creds dictionary to be passed in if you want to connect. Structure is as follows:
+    {
+    'usr' :<read from aws secret manager>,
+    'pkb' : <read from aws secret manager>,
+    'role' : 'role',
+    'warehouse_name' : 'warehouse',
+    'schema' : 'schema'
+    }
+
+
+    Output
+    ------
+    resp : pandas df with results from query
+
+    """
+
+    creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
+
+    # conn = get_snowflake_connection(**creds_dict)
+
+    # resp = conn.cursor().execute(query).fetchall()
+
+    sc2 = SparkContext.getOrCreate()
+    spark_fbi = SparkSession(sc2)
+
+    resp = (
+        spark_fbi.read.format("snowflake")
+        .options(**creds_dict)
+        .option("query", query)
+        .load()
+    )
 
     # conn.close()
 
@@ -782,6 +833,7 @@ def get_spark_schema(pdf):
         struct_list.append(StructField(col, spark_typ))
 
     spark_schema = StructType(struct_list)
+
     return spark_schema
 
 

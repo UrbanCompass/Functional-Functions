@@ -24,10 +24,6 @@ from functional_functions.ff_classes import FBI_S3, DBX_sql, AWS_Secrets
 
 import logging
 
-from pyspark.context import SparkContext
-from pyspark.sql.session import SparkSession
-from pyspark.sql.utils import AnalysisException
-
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
 
 # import jaydebeapi as jay
@@ -354,19 +350,9 @@ def query_snowflake_spark_df(query, creds=None):
 
     creds_dict = creds if creds else AWS_Secrets().get_snowflake_secrets()
 
-    # conn = get_snowflake_connection(**creds_dict)
+    conn = get_snowflake_connection(**creds_dict)
 
-    # resp = conn.cursor().execute(query).fetchall()
-
-    sc2 = SparkContext.getOrCreate()
-    spark_fbi = SparkSession(sc2)
-
-    resp = (
-        spark_fbi.read.format("snowflake")
-        .options(**creds_dict)
-        .option("query", query)
-        .load()
-    )
+    resp = conn.cursor().execute(query).fetchall()
 
     # conn.close()
 
