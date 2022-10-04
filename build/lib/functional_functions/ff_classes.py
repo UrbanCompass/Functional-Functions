@@ -238,7 +238,33 @@ class AWS_Secrets:
         # pkey = 'pkey'
         secrets = self.read_aws_secret(secret_name='cred.fbi.snowflake')
         username = self.decode_snowflake_username(username_encoded=secrets['snowflake_usn'])
-        pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
+        #pkey = self.decrypt_aws_private_key(pkey_encrypted=secrets['snowflake_secret_key'], pkey_passphrase=secrets['snowflake_pass_phrase'])
+
+        pkey_encrypted=secrets['snowflake_secret_key']
+        pkey_passphrase=secrets['snowflake_pass_phrase']
+
+        KEY_PREFIX = '-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
+        KEY_POSTFIX = '\n-----END ENCRYPTED PRIVATE KEY-----\n'
+        pkey = KEY_PREFIX + '\n'.join(pkey_encrypted.split(' ')) + KEY_POSTFIX
+
+        password = self._decode_string(pkey_passphrase).replace("\n", "")
+        password_to_byte = bytes(password, 'utf8')
+        private_key_to_byte = bytes(pkey, 'utf8')
+
+        p_key = serialization.load_pem_private_key(
+                        private_key_to_byte,
+                        password=password_to_byte,
+                        backend=default_backend()
+                )
+        pkb = p_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                )
+
+        pkb = pkb.decode("UTF-8")
+        pkey = re.sub("-*(BEGIN|END) PRIVATE KEY-*\n", "", pkb).replace("\n", "")
+
         role = secrets['snowflake_role']
         warehouse_name = secrets['snowflake_wh']
         db = secrets['snowflake_db_name']
