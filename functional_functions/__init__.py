@@ -745,6 +745,7 @@ def load_via_spark_dbx(value, key, exist_val, istest):
         # print(str(e))
         databricks_table_exist_flag = False
     # converting np.nan (which not accepted by spark) values to None
+    print(value)
     value = value.where(pd.notnull(value), None)
     spark_schema = get_spark_schema(value)
     try:
