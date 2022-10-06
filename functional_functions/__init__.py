@@ -784,6 +784,18 @@ def load_via_spark_dbx_agent_ar(value, key, exist_val, istest):
     sc2 = SparkContext.getOrCreate()
     spark_fbi = SparkSession(sc2)
 
+    catalog = "finance_accounting"
+    # in some case, istest is pass as string, changing in load_method_by_env() as well
+    database = "finance_test" if istest == True else "finance_prod"
+    full_table_name = f"{catalog}.{database}.{key}"
+    
+    try:
+        df = spark_fbi.table(full_table_name)
+        databricks_table_exist_flag = True
+    except AnalysisException as e:
+        # print(str(e))
+        databricks_table_exist_flag = False
+
     print("In load_via_spark_dbx_agent_ar() method")
 
     try:
