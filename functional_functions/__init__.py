@@ -27,8 +27,6 @@ import logging
 from pyspark.context import SparkContext
 from pyspark.sql.session import SparkSession
 from pyspark.sql.utils import AnalysisException
-import pyspark.sql.functions
-import pyspark.sql.SaveMode
 
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
 
