@@ -198,23 +198,13 @@ def load_via_sql_snowflake_agent_ar(load_df, tbl_name, if_exists="replace", test
 
         print(f"Since if_exists = replace; dropping the existing table and loading the data: {tbl_name}")
 
-        df.write
-        .format("snowflake")
-        .options(**creds_dict)
-        .option("dbtable", tbl_name)
-        .mode(SaveMode.Overwrite)
-        .save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(SaveMode.Overwrite).save()
 
     else:
 
         print(f"Since if_exists = append; appending the data to the existing table: {tbl_name}")
 
-        df.write
-        .format("snowflake")
-        .options(**creds_dict)
-        .option("dbtable", tbl_name)
-        .mode(SaveMode.Append)
-        .save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(SaveMode.Append).save()
 
 
 
