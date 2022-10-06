@@ -198,13 +198,13 @@ def load_via_sql_snowflake_agent_ar(load_df, tbl_name, if_exists="replace", test
 
         print(f"Since if_exists = replace; dropping the existing table and loading the data: {tbl_name}")
 
-        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(SaveMode.Overwrite).save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(Overwrite).save()
 
     else:
 
         print(f"Since if_exists = append; appending the data to the existing table: {tbl_name}")
 
-        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(SaveMode.Append).save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(Append).save()
 
 
 
@@ -788,7 +788,7 @@ def load_via_spark_dbx_agent_ar(value, key, exist_val, istest):
     # in some case, istest is pass as string, changing in load_method_by_env() as well
     database = "finance_test" if istest == True else "finance_prod"
     full_table_name = f"{catalog}.{database}.{key}"
-    
+
     try:
         df = spark_fbi.table(full_table_name)
         databricks_table_exist_flag = True
