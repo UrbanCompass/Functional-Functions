@@ -27,6 +27,8 @@ import logging
 from pyspark.context import SparkContext
 from pyspark.sql.session import SparkSession
 from pyspark.sql.utils import AnalysisException
+import pyspark.sql.functions
+import pyspark.sql.SaveMode
 
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(name)s -- %(funcName)s() :: %(levelname)s :: %(message)s')
 
@@ -198,13 +200,13 @@ def load_via_sql_snowflake_agent_ar(load_df, tbl_name, if_exists="replace", test
 
         print(f"Since if_exists = replace; dropping the existing table and loading the data: {tbl_name}")
 
-        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(Overwrite).save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode("overwrite").save()
 
     else:
 
         print(f"Since if_exists = append; appending the data to the existing table: {tbl_name}")
 
-        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode(Append).save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode("append").save()
 
 
 
