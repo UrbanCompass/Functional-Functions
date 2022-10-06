@@ -805,13 +805,13 @@ def load_via_spark_dbx_agent_ar(value, key, exist_val, istest):
             elif exist_val == "append":
                 write_mode = "append"
             
-            df.write.format("delta").mode(write_mode).option(
+            value.write.format("delta").mode(write_mode).option(
             "overwriteSchema", "true"
             ).saveAsTable(full_table_name)
 
         else:
             
-            df.write.format("delta").option(
+            value.write.format("delta").option(
                 "path", f"s3://di-databricks-production-finance/{database}/{key}"
             ).saveAsTable(full_table_name)
             
