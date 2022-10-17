@@ -4,7 +4,7 @@ import pickle
 import os, sys
 
 # from databricks import sql
-from sqlalchemy import URL
+# from sqlalchemy import URL
 from sqlalchemy import create_engine
 
 # import pandas.io.sql as pdsql
