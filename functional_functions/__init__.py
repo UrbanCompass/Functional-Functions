@@ -4,7 +4,7 @@ import pickle
 import os, sys
 
 # from databricks import sql
-from sqlalchemy import URL
+#from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 
 # import pandas.io.sql as pdsql
@@ -170,10 +170,7 @@ def load_via_sql_snowflake(
 
     # conn.close()
 
-
-def load_via_sql_snowflake_agent_ar(
-    load_df, tbl_name, if_exists="replace", test_mode=True, creds=None
-):
+def load_via_sql_snowflake_agent_ar(load_df, tbl_name, if_exists="replace", test_mode=True, creds=None):
 
     """
     Parameters
@@ -196,26 +193,19 @@ def load_via_sql_snowflake_agent_ar(
     schema = creds_dict["sfschema"]
 
     print("In load_via_sql_snowflake_agent_ar() method")
-
+    
     if if_exists == "replace":
 
-        print(
-            f"Since if_exists = replace; dropping the existing table and loading the data: {tbl_name}"
-        )
+        print(f"Since if_exists = replace; dropping the existing table and loading the data: {tbl_name}")
 
-        load_df.write.format("snowflake").options(**creds_dict).option(
-            "dbtable", tbl_name
-        ).mode("overwrite").save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode("overwrite").save()
 
     else:
 
-        print(
-            f"Since if_exists = append; appending the data to the existing table: {tbl_name}"
-        )
+        print(f"Since if_exists = append; appending the data to the existing table: {tbl_name}")
 
-        load_df.write.format("snowflake").options(**creds_dict).option(
-            "dbtable", tbl_name
-        ).mode("append").save()
+        load_df.write.format("snowflake").options(**creds_dict).option("dbtable", tbl_name).mode("append").save()
+
 
 
 def get_logger(name, dirpath=None, level=logging.INFO):
@@ -747,7 +737,7 @@ def query_method_by_env_dbx(query, use_service_account=True):
         return query_databricks(query, use_service_account)
 
 
-def load_method_by_env(value, key, exist_val, istest, agent_ar_pipeline="N"):
+def load_method_by_env(value, key, exist_val, istest, agent_ar_pipeline='N'):
     """
     currently load value into both dbx and snowflakes
     dbx load using Spark API
@@ -759,7 +749,7 @@ def load_method_by_env(value, key, exist_val, istest, agent_ar_pipeline="N"):
     else:
         testflag = True
 
-    if agent_ar_pipeline == "Y":
+    if agent_ar_pipeline == 'Y':
 
         if os.environ.get("environment") == "databricks":
             load_via_spark_dbx_agent_ar(value, key, exist_val, istest=testflag)
@@ -788,7 +778,7 @@ def load_method_by_env(value, key, exist_val, istest, agent_ar_pipeline="N"):
 
 def load_via_spark_dbx_agent_ar(value, key, exist_val, istest):
     """
-    only use on DBX and only for agent_ar dataset load.
+    only use on DBX and only for agent_ar dataset load. 
     loading table via spark api called by load_method_env()
     """
     sc2 = SparkContext.getOrCreate()
@@ -814,17 +804,17 @@ def load_via_spark_dbx_agent_ar(value, key, exist_val, istest):
                 write_mode = "overwrite"
             elif exist_val == "append":
                 write_mode = "append"
-
+            
             value.write.format("delta").mode(write_mode).option(
-                "overwriteSchema", "true"
+            "overwriteSchema", "true"
             ).saveAsTable(full_table_name)
 
         else:
-
+            
             value.write.format("delta").option(
                 "path", f"s3://di-databricks-production-finance/{database}/{key}"
             ).saveAsTable(full_table_name)
-
+            
             spark_fbi.sql(
                 f"GRANT ALL PRIVILEGES ON TABLE {catalog}.{database}.{key} TO `FBI Team`"
             )
@@ -833,7 +823,6 @@ def load_via_spark_dbx_agent_ar(value, key, exist_val, istest):
     except:
         logging.exception("Exception Occurred")
         raise Exception("Could not write the table to databricks")
-
 
 def load_via_spark_dbx(value, key, exist_val, istest):
     """
@@ -858,7 +847,8 @@ def load_via_spark_dbx(value, key, exist_val, istest):
     except AnalysisException as e:
         # print(str(e))
         databricks_table_exist_flag = False
-
+    
+    
     # converting np.nan (which not accepted by spark) values to None
     value = value.where(pd.notnull(value), None)
     spark_schema = get_spark_schema(value)
@@ -871,7 +861,7 @@ def load_via_spark_dbx(value, key, exist_val, istest):
             elif exist_val == "append":
                 write_mode = "append"
             df.write.format("delta").mode(write_mode).option(
-                "overwriteSchema", "true"
+            "overwriteSchema", "true"
             ).saveAsTable(full_table_name)
         else:
             df.write.format("delta").option(
