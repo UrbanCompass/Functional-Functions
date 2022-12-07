@@ -774,8 +774,8 @@ def load_method_by_env(value, key, exist_val, istest, agent_ar_pipeline="N"):
 
     else:
 
-        if os.environ.get("environment") == "databricks":
-            load_via_spark_dbx(value, key, exist_val, istest=testflag)
+        # if os.environ.get("environment") == "databricks":
+            # load_via_spark_dbx(value, key, exist_val, istest=testflag)
 
         try:
             load_via_sql_snowflake(
